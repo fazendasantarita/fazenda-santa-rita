@@ -343,13 +343,14 @@ input.inp:focus,select.inp:focus{border-color:var(--verde);}
 
 // Usuários base (sem roles, para manter compatibilidade com index.html)
 // Roles e senhas são gerenciadas aqui via localStorage
-var USERS_BASE = ['admin'];
+var _UDEF = (window.APP_CONFIG && window.APP_CONFIG.USUARIOS) || {admin:{nome:'Administrador',senha:'trocar123',perfil:'gestor'}};
+var USERS_BASE = Object.keys(_UDEF);
 
 var currentUser = sessionStorage.getItem('gf_user') || '';
 var currentLogin = currentUser.toLowerCase();
 
 // Se não tiver role salvo (index.html antigo), inferir pelo login
-var GESTORES_DEFAULT = ['admin'];
+var GESTORES_DEFAULT = USERS_BASE.filter(function(k){ return _UDEF[k].perfil === 'gestor'; });
 var currentRole = sessionStorage.getItem('gf_role') ||
   (GESTORES_DEFAULT.indexOf(currentLogin) >= 0 ? 'gestor' : 'funcionario');
 
@@ -392,8 +393,8 @@ var PERMS_DEF = {
   relatorios_bloqueado:{ label: 'Bloquear Relatórios', desc: 'Relatórios é liberado por padrão; marque para BLOQUEAR este usuário', inverso: true }
 };
 
-var SENHAS_DEF = {admin:'trocar123'};
-var ROLES_DEF  = {admin:'gestor'};
+var SENHAS_DEF = {}, ROLES_DEF = {}, NOMES_DEF = {};
+USERS_BASE.forEach(function(k){ SENHAS_DEF[k]=_UDEF[k].senha; ROLES_DEF[k]=_UDEF[k].perfil||'funcionario'; NOMES_DEF[k]=_UDEF[k].nome; });
 
 function getUsers() {
   var stored = localStorage.getItem('gf_users_v2');
@@ -411,7 +412,7 @@ function getUsers() {
     // Suporta formato antigo {senha, role} e novo {login, nome, senha, role, perms}
     result[login] = {
       login : login,
-      nome  : saved.nome  || (login.charAt(0).toUpperCase() + login.slice(1)),
+      nome  : saved.nome  || NOMES_DEF[login] || (login.charAt(0).toUpperCase() + login.slice(1)),
       senha : saved.senha || SENHAS_DEF[login] || 'trocar123',
       role  : saved.role  || ROLES_DEF[login]  || 'funcionario',
       ativo : saved.ativo !== false,

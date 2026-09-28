@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Santa Rita — Endividamento</title>
+<script src="config.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -134,26 +135,25 @@ input:focus{border-color:var(--verde-light);box-shadow:0 0 0 3px rgba(74,140,92,
   </div>
 </div>
 <script>
-// USUÁRIOS: { usuario: { senha, role: 'gestor'|'funcionario', nome } }
-var USERS = {
-  'admin': { senha:'trocar123', role:'gestor', nome:'Administrador' }
-};
+// Usuários vêm do config.js (APP_CONFIG.USUARIOS) + senhas trocadas em localStorage ('gf_users_v2')
+var DEF = (window.APP_CONFIG && window.APP_CONFIG.USUARIOS) || {};
+function lerUsers(){ try { return JSON.parse(localStorage.getItem('gf_users_v2')||'{}')||{}; } catch(e){ return {}; } }
 
 function login() {
   var u = (document.getElementById('u').value||'').trim().toLowerCase();
   var p = document.getElementById('p').value||'';
-  var user = USERS[u];
-  if(user && user.senha === p) {
-    sessionStorage.setItem('gf_user', user.nome);
-    sessionStorage.setItem('gf_role', user.role);
-    window.location.href = 'app-endividamento.html';
-  } else {
-    var err = document.getElementById('err');
-    err.textContent = '⚠ Usuário ou senha incorretos';
-    document.getElementById('p').value = '';
-    document.getElementById('p').focus();
-    setTimeout(function(){err.textContent='';}, 3000);
-  }
+  var st = lerUsers()[u], def = DEF[u];
+  var senha = (st && st.senha) || (def && def.senha);
+  var role  = (st && st.role)  || (def && def.perfil) || 'funcionario';
+  var err = document.getElementById('err');
+  function falha(msg){ err.textContent = '⚠ ' + msg; document.getElementById('p').value=''; document.getElementById('p').focus(); setTimeout(function(){err.textContent='';}, 3500); }
+  if(!senha || p !== senha || (st && st.ativo === false)) return falha('Usuário ou senha incorretos');
+  if(def && p === def.senha) return falha('Primeiro acesso: entre pela tela principal para criar sua senha');
+  var liberado = role === 'gestor' || (st && st.perms && st.perms.endividamento === true);
+  if(!liberado) return falha('Sem acesso ao Endividamento');
+  sessionStorage.setItem('gf_user', u.charAt(0).toUpperCase() + u.slice(1));
+  sessionStorage.setItem('gf_role', role);
+  window.location.href = 'app-endividamento.html';
 }
 
 if(sessionStorage.getItem('gf_user')) window.location.href = 'app-endividamento.html';
