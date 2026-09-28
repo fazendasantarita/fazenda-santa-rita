@@ -22,6 +22,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Santa Rita — Login</title>
+  <script src="config.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   
 <style>
@@ -77,6 +78,7 @@
     margin-top: 12px; min-height: 18px;
     font-family: 'DM Mono', monospace;
   }
+  .aviso { background:#fff7e0; border:1px solid #e8c96a; color:#6b5200; border-radius:10px; padding:12px 14px; font-size:13px; margin-bottom:18px; line-height:1.45; font-family:'DM Mono',monospace; }
   .footer { margin-top: 32px; font-size: 10px; color: #ccc; font-family: 'DM Mono', monospace; }
 </style>
 
@@ -84,58 +86,93 @@
 <body>
   <div class="card">
     <img src="logo.png" alt="Fazenda Santa Rita">
-    <div>
+    <div id="box-login">
       <label class="label" for="u">Usuário</label>
-      <input class="inp" type="text" id="u" placeholder="seu usuario" autocomplete="username"
+      <input class="inp" type="text" id="u" placeholder="seu usuario" autocomplete="username" autocapitalize="off"
         onkeydown="if(event.key==='Enter')document.getElementById('p').focus()">
       <label class="label" for="p">Senha</label>
       <input class="inp" type="password" id="p" placeholder="••••••••" autocomplete="current-password"
         onkeydown="if(event.key==='Enter')login()">
       <button class="btn" onclick="login()">Entrar</button>
-      <div class="err" id="err"></div>
     </div>
+    <div id="box-troca" style="display:none;">
+      <div class="aviso">Primeiro acesso de <b id="troca-nome"></b>.<br>Crie uma senha pessoal para continuar.</div>
+      <label class="label" for="n1">Nova senha</label>
+      <input class="inp" type="password" id="n1" placeholder="mínimo 6 caracteres" autocomplete="new-password"
+        onkeydown="if(event.key==='Enter')document.getElementById('n2').focus()">
+      <label class="label" for="n2">Confirmar nova senha</label>
+      <input class="inp" type="password" id="n2" placeholder="repita a senha" autocomplete="new-password"
+        onkeydown="if(event.key==='Enter')salvarNovaSenha()">
+      <button class="btn" onclick="salvarNovaSenha()">Salvar e entrar</button>
+    </div>
+    <div class="err" id="err"></div>
     <div class="footer">Fazenda Santa Rita &copy; 2026</div>
   </div>
   <script>
-    // Usuários base — senhas e roles podem ser sobrescritos pelo app-config via localStorage
-    var USERS_DEFAULT = {
-      admin:{senha:'trocar123',role:'gestor'}
-    };
+    // Usuários e senhas iniciais vêm do config.js (APP_CONFIG.USUARIOS).
+    // Senhas trocadas ficam em localStorage ('gf_users_v2'), mesmo formato usado pelo app-config.
+    var DEF = (window.APP_CONFIG && window.APP_CONFIG.USUARIOS) || {};
+    var pendente = null;
 
-    function getUsers() {
-      var stored = localStorage.getItem('gf_users_v2');
-      if(stored) return JSON.parse(stored);
-      return null;
+    function lerUsers() {
+      try { return JSON.parse(localStorage.getItem('gf_users_v2') || '{}') || {}; } catch(e) { return {}; }
+    }
+    function erro(msg) {
+      var err = document.getElementById('err');
+      err.textContent = msg;
+      setTimeout(function(){ if(err.textContent === msg) err.textContent=''; }, 3500);
+    }
+    function entrar(login, role) {
+      var nome = login.charAt(0).toUpperCase() + login.slice(1);
+      sessionStorage.setItem('gf_user', nome);
+      sessionStorage.setItem('gf_role', role);
+      window.location.href = 'app.html';
     }
 
     function login() {
       var u = (document.getElementById('u').value||'').trim().toLowerCase();
       var p = document.getElementById('p').value||'';
-      var stored = getUsers();
-      var senha, role;
-      if(stored && stored[u]) {
-        senha = stored[u].senha;
-        role  = stored[u].role || 'funcionario';
-      } else if(USERS_DEFAULT[u]) {
-        senha = USERS_DEFAULT[u].senha;
-        role  = USERS_DEFAULT[u].role;
-      } else {
-        senha = null;
+      var st = lerUsers()[u], def = DEF[u];
+      if(!st && !def) { document.getElementById('p').value=''; return erro('Usuário ou senha incorretos'); }
+      if(st && st.ativo === false) return erro('Usuário desativado');
+      var senha = (st && st.senha) || (def && def.senha);
+      var role  = (st && st.role)  || (def && def.perfil) || 'funcionario';
+      if(!senha || p !== senha) {
+        document.getElementById('p').value=''; document.getElementById('p').focus();
+        return erro('Usuário ou senha incorretos');
       }
-      if(senha && p === senha) {
-        var nome = u.charAt(0).toUpperCase() + u.slice(1);
-        sessionStorage.setItem('gf_user', nome);
-        sessionStorage.setItem('gf_role', role);
-        window.location.href = 'app.html';
-      } else {
-        var err = document.getElementById('err');
-        err.textContent = 'Usuário ou senha incorretos';
-        document.getElementById('p').value='';
-        document.getElementById('p').focus();
-        setTimeout(function(){err.textContent='';}, 3000);
+      // Ainda usando a senha inicial do config.js → obriga a troca
+      if(def && def.senha && p === def.senha) {
+        pendente = { login:u, role:role, inicial:def.senha, nome:(def.nome||u) };
+        document.getElementById('box-login').style.display='none';
+        document.getElementById('box-troca').style.display='';
+        document.getElementById('troca-nome').textContent = pendente.nome;
+        document.getElementById('n1').focus();
+        return;
       }
+      entrar(u, role);
     }
-    // Se já logado, ir direto para o app
+
+    function salvarNovaSenha() {
+      if(!pendente) return;
+      var a = document.getElementById('n1').value||'', b = document.getElementById('n2').value||'';
+      if(a.length < 6)            return erro('A senha precisa ter pelo menos 6 caracteres');
+      if(a !== b)                 return erro('As senhas não conferem');
+      if(a === pendente.inicial)  return erro('A nova senha deve ser diferente da inicial');
+      var users = lerUsers();
+      var reg = users[pendente.login] || {};
+      users[pendente.login] = {
+        login: pendente.login,
+        nome:  reg.nome || pendente.nome,
+        senha: a,
+        role:  reg.role || pendente.role,
+        ativo: reg.ativo !== false,
+        perms: reg.perms || {}
+      };
+      localStorage.setItem('gf_users_v2', JSON.stringify(users));
+      entrar(pendente.login, users[pendente.login].role);
+    }
+
     if(sessionStorage.getItem('gf_user')) window.location.href='app.html';
     document.getElementById('u').focus();
   </script>

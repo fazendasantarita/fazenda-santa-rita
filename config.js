@@ -32,6 +32,16 @@ window.APP_CONFIG = {
     'MARIO',
   ],
 
+  // Logins do sistema. "senha" é a senha INICIAL: no primeiro acesso com ela
+  // o sistema obriga a pessoa a criar uma senha nova.
+  // perfil: 'gestor' (acesso total) ou 'funcionario' (liberações em Config → Acessos)
+  USUARIOS: {
+    admin:   { nome: 'Administrador',         senha: 'trocar123', perfil: 'gestor' },
+    giovana: { nome: 'Giovana Bispo Soares',  senha: '08387',     perfil: 'funcionario' },
+    renata:  { nome: 'Renata Pinto Ferreira', senha: '01567',     perfil: 'funcionario' },
+    juliana: { nome: 'Juliana Pinto Ferreira',senha: '02462',     perfil: 'funcionario' },
+  },
+
   // Titulares dos contratos de endividamento
   TITULARES: [
     'JOSE ADRIANO',
