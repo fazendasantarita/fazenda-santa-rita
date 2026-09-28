@@ -1,0 +1,2469 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Santa Rita — Endividamento</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --verde:#1a3a2a;--verde-mid:#2d5c3f;--verde-light:#4a8c5c;
+  --ouro:#c8a84b;--ouro-light:#e8c96a;
+  --creme:#f5f0e8;--creme-dark:#e8e0d0;--branco:#fafaf7;
+  --cinza:#8a8a7a;--cinza-light:#d4d0c8;--texto:#1a1a14;
+  --erro:#c0392b;--aviso:#f0ad4e;--sucesso:#27ae60;
+  --shadow:0 4px 24px rgba(26,58,42,0.10);--shadow-lg:0 12px 48px rgba(26,58,42,0.16);
+  --radius:12px;--radius-sm:6px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--creme);color:var(--texto);min-height:100vh;}
+
+/* ── HEADER ── */
+header{background:var(--verde);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,0.25);}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--ouro);letter-spacing:0.05em;display:flex;align-items:center;gap:8px;}
+.logo span{color:rgba(245,240,232,0.5);font-weight:400;font-size:12px;}
+.nav-tabs{display:flex;gap:3px;}
+.nav-tab{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;padding:7px 16px;border-radius:6px;border:none;cursor:pointer;transition:all 0.2s;color:rgba(245,240,232,0.55);background:transparent;}
+.nav-tab:hover{color:var(--creme);background:rgba(255,255,255,0.08);}
+.nav-tab.active{background:var(--ouro);color:var(--verde);font-weight:700;}
+.nav-tab.restricted{opacity:0.3;cursor:not-allowed;pointer-events:none;}
+.header-right{display:flex;align-items:center;gap:14px;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--cinza);transition:background 0.3s;}
+.sync-dot.online{background:var(--sucesso);box-shadow:0 0 5px rgba(39,174,96,0.5);}
+.sync-dot.syncing{background:var(--ouro);animation:pulse 1s infinite;}
+.sync-dot.error{background:var(--erro);}
+.user-chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:4px 12px 4px 6px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.06em;}
+.user-avatar{width:22px;height:22px;border-radius:50%;background:var(--ouro);color:var(--verde);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
+.user-name{color:rgba(245,240,232,0.8);}
+.role-tag{color:var(--ouro);font-size:9px;text-transform:uppercase;letter-spacing:0.1em;}
+.btn-sair{font-size:11px;padding:5px 14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:rgba(245,240,232,0.7);cursor:pointer;font-family:'DM Mono',monospace;letter-spacing:0.04em;transition:all 0.2s;}
+.btn-sair:hover{background:rgba(255,255,255,0.2);color:var(--creme);}
+
+/* ── BLOQUEIO ── */
+.blocked-overlay{position:fixed;inset:0;background:rgba(26,58,42,0.82);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;}
+.blocked-overlay.hidden{display:none;}
+.blocked-box{background:var(--branco);border-radius:var(--radius);padding:48px 52px;text-align:center;max-width:420px;box-shadow:var(--shadow-lg);}
+.blocked-icon{font-size:48px;margin-bottom:16px;}
+.blocked-box h2{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:var(--verde);margin-bottom:8px;}
+.blocked-box p{color:var(--cinza);font-size:14px;line-height:1.6;}
+
+/* ── LOADING ── */
+.loading-overlay{position:fixed;inset:0;background:rgba(26,58,42,0.72);backdrop-filter:blur(5px);z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.loading-overlay.hidden{display:none;}
+.spinner{width:40px;height:40px;border:3px solid rgba(200,168,75,0.25);border-top-color:var(--ouro);border-radius:50%;animation:spin 0.8s linear infinite;}
+.loading-text{font-family:'DM Mono',monospace;font-size:11px;color:var(--ouro-light);letter-spacing:0.12em;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ── VIEWS ── */
+.view{display:none;}.view.active{display:block;}
+.container{max-width:1320px;margin:0 auto;padding:32px 24px;}
+
+/* ── CARDS / STATS ── */
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--verde);}
+.page-subtitle{color:var(--cinza);font-size:13px;margin-top:3px;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--branco);border-radius:var(--radius);padding:18px 22px;box-shadow:var(--shadow);border-left:4px solid var(--verde-light);}
+.stat-card.ouro{border-left-color:var(--ouro);}
+.stat-card.warn{border-left-color:var(--aviso);}
+.stat-card.ok{border-left-color:var(--sucesso);}
+.stat-card.danger{border-left-color:var(--erro);}
+.stat-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--cinza);margin-bottom:6px;}
+.stat-value{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:26px;color:var(--verde);white-space:nowrap;}
+.stat-value.money{font-size:clamp(13px,1.4vw,20px);letter-spacing:0em;white-space:nowrap;}
+.stat-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--cinza);margin-top:4px;}
+
+/* ── FILTROS ── */
+.filters-bar{background:var(--branco);border-radius:var(--radius);padding:14px 18px;display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;box-shadow:var(--shadow);flex-wrap:wrap;}
+.filter-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px;}
+.filter-group.wide{min-width:180px;flex:2;}
+.filter-group label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--cinza);}
+.filter-group select,.filter-group input{padding:7px 10px;font-size:13px;border:1.5px solid var(--creme-dark);border-radius:var(--radius-sm);background:var(--branco);color:var(--texto);outline:none;transition:border-color 0.2s;}
+.filter-group select:focus,.filter-group input:focus{border-color:var(--verde-light);}
+
+/* ── TABELA ── */
+.table-wrapper{background:var(--branco);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.table-toolbar{padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--creme-dark);gap:8px;flex-wrap:wrap;}
+.table-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--cinza);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{background:var(--verde);color:rgba(245,240,232,0.75);font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:10px 13px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;}
+thead th:hover{color:var(--ouro-light);}
+thead th.sort-asc::after{content:' ▲';}
+thead th.sort-desc::after{content:' ▼';}
+tbody tr{border-bottom:1px solid var(--creme-dark);transition:background 0.12s;cursor:pointer;}
+tbody tr:hover{background:#f0ede5;}
+tbody tr:last-child{border-bottom:none;}
+td{padding:9px 13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+td.mono{font-family:'DM Mono',monospace;font-size:12px;}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:0.04em;}
+.badge-custeio{background:#fff3cd;color:#856404;}
+.badge-investimento{background:#d1ecf1;color:#0c5460;}
+.badge-cpr{background:#f8d7da;color:#721c24;}
+.badge-aditivo{background:#fdebd0;color:#784212;}
+.badge-cp{background:#fde8e8;color:#922b21;}
+.badge-lp{background:#d5e8d4;color:#1e8449;}
+.badge-vencida{background:#f8d7da;color:#721c24;}
+.badge-ativa{background:#d4edda;color:#155724;}
+
+/* ── BOTÕES ── */
+.btn{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.04em;padding:9px 22px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:7px;}
+.btn:disabled{opacity:0.45;cursor:not-allowed;}
+.btn-primary{background:var(--verde);color:var(--ouro);}
+.btn-primary:hover:not(:disabled){background:var(--verde-mid);transform:translateY(-1px);box-shadow:var(--shadow);}
+.btn-secondary{background:transparent;color:var(--cinza);border:1.5px solid var(--creme-dark);}
+.btn-secondary:hover{border-color:var(--cinza);color:var(--texto);}
+.btn-ouro{background:var(--ouro);color:var(--verde);}
+.btn-ouro:hover{background:var(--ouro-light);transform:translateY(-1px);}
+.btn-danger{background:transparent;color:var(--erro);border:1.5px solid rgba(192,57,43,0.2);}
+.btn-danger:hover{background:rgba(192,57,43,0.06);}
+.btn-warn{background:transparent;color:#856404;border:1.5px solid rgba(240,173,78,0.3);}
+.btn-warn:hover{background:rgba(240,173,78,0.1);}
+.btn-sm{padding:6px 14px;font-size:11px;}
+
+/* ── FORM ── */
+.form-container{max-width:1000px;margin:32px auto;padding:0 24px;}
+.form-card{background:var(--branco);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.form-section{padding:24px 30px;border-bottom:1px solid var(--creme-dark);}
+.form-section:last-child{border-bottom:none;}
+.section-label{font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:var(--verde-light);margin-bottom:18px;display:flex;align-items:center;gap:10px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--creme-dark);}
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.form-grid.two{grid-template-columns:1fr 1fr;}
+.form-grid.four{grid-template-columns:repeat(4,1fr);}
+.col-2{grid-column:span 2;}
+.col-3{grid-column:span 3;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--cinza);}
+.field label .req{color:var(--ouro);margin-left:2px;}
+.field input,.field select,.field textarea{
+  font-family:'DM Sans',sans-serif;font-size:14px;
+  padding:9px 13px;border:1.5px solid var(--creme-dark);
+  border-radius:var(--radius-sm);background:var(--branco);
+  color:var(--texto);transition:border-color 0.2s,box-shadow 0.2s;outline:none;width:100%;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--verde-light);box-shadow:0 0 0 3px rgba(74,140,92,0.1);}
+.field select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238a8a7a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+.valor-wrap{position:relative;}
+.valor-pre{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-family:'DM Mono',monospace;font-size:12px;color:var(--cinza);pointer-events:none;}
+.valor-wrap input{padding-left:36px;}
+.form-actions{padding:20px 30px;background:var(--creme);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,58,42,0.45);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.22s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--branco);border-radius:var(--radius);width:90%;max-width:840px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:translateY(14px);transition:transform 0.22s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-sm .modal{max-width:480px;}
+.modal-header{padding:22px 26px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--creme-dark);position:sticky;top:0;background:var(--branco);z-index:1;}
+.modal-title{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;color:var(--verde);}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--cinza);padding:4px 8px;border-radius:4px;transition:background 0.15s;}
+.modal-close:hover{background:var(--creme-dark);}
+.modal-body{padding:22px 26px;}
+.modal-footer{padding:14px 26px;border-top:1px solid var(--creme-dark);display:flex;gap:10px;justify-content:flex-end;}
+
+/* ── DETAIL GRID ── */
+.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.di{display:flex;flex-direction:column;gap:4px;}
+.di .dl{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--cinza);}
+.di .dv{font-size:14px;color:var(--texto);font-weight:500;}
+.di.full{grid-column:span 3;}
+.di.two{grid-column:span 2;}
+
+/* ── PARCELAS TABLE ── */
+.parcelas-tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;}
+.parcelas-tbl th{background:var(--creme);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--cinza);padding:8px 12px;text-align:left;border-bottom:1px solid var(--creme-dark);}
+.parcelas-tbl td{padding:8px 12px;border-bottom:1px solid var(--creme-dark);}
+.parcelas-tbl tbody tr:last-child td{border-bottom:none;}
+.parcelas-tbl tbody tr:hover{background:var(--creme);}
+.tr-vencida{background:#fff5f5 !important;}
+.tr-paga{background:#f0faf0 !important;opacity:0.75;}
+
+/* ── DASHBOARD ── */
+.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+.dash-card{background:var(--branco);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow);}
+.dash-card-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--cinza);margin-bottom:14px;}
+.chart-wrap{position:relative;width:100%;}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px;}
+.bar-label{min-width:72px;color:var(--cinza);text-align:right;font-family:'DM Mono',monospace;font-size:11px;}
+.bar-track{flex:1;background:var(--creme-dark);border-radius:4px;height:14px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;transition:width 0.6s ease;}
+.bar-val{min-width:68px;color:var(--texto);font-weight:500;font-family:'DM Mono',monospace;font-size:11px;text-align:right;}
+
+/* ── ALERTA ── */
+.alert{border-radius:var(--radius-sm);padding:9px 13px;font-size:12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:8px;}
+.alert-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+.alert-danger{background:#fde8e8;border:1px solid rgba(192,57,43,0.2);color:#7b241c;}
+.alert-warn{background:#fef9e7;border:1px solid rgba(240,173,78,0.3);color:#7d6608;}
+.alert-ok{background:#eafaf1;border:1px solid rgba(39,174,96,0.2);color:#1e8449;}
+.alert-info{background:#eaf4ff;border:1px solid rgba(52,152,219,0.2);color:#1a5276;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--verde);color:var(--ouro-light);font-family:'DM Mono',monospace;font-size:12px;padding:11px 18px;border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:300;transform:translateY(14px);opacity:0;transition:all 0.3s;display:flex;align-items:center;gap:8px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.err{background:var(--erro);}
+.toast.warn{background:#856404;}
+
+/* ── EMPTY ── */
+.empty-state{padding:50px 20px;text-align:center;color:var(--cinza);}
+.empty-icon{font-size:36px;margin-bottom:10px;}
+
+/* ── PROGRESS BAR DE AMORTIZAÇÃO ── */
+.prog-wrap{background:var(--creme-dark);border-radius:20px;height:8px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:20px;background:var(--verde-light);transition:width 0.5s ease;}
+
+/* ── RESPONSIVO ── */
+@media(max-width:900px){
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .dashboard-grid{grid-template-columns:1fr;}
+  .form-grid{grid-template-columns:1fr 1fr;}
+  .form-grid.four{grid-template-columns:1fr 1fr;}
+  .detail-grid{grid-template-columns:1fr 1fr;}
+  .di.full{grid-column:span 2;}
+  header{padding:0 14px;height:auto;flex-wrap:wrap;gap:8px;padding:10px 14px;}
+  .nav-tabs{order:3;width:100%;}
+  .nav-tab{flex:1;text-align:center;}
+}
+@media(max-width:600px){
+  .stats-grid{grid-template-columns:1fr;}
+  .form-grid,.form-grid.two,.form-grid.four{grid-template-columns:1fr;}
+  .col-2,.col-3{grid-column:span 1;}
+  .dashboard-grid{grid-template-columns:1fr;}
+}
+</style>
+  <script src="config.js"></script>
+</head>
+<body>
+
+<!-- BLOQUEIO para não-gestores nas áreas restritas -->
+<div class="blocked-overlay hidden" id="blockedOverlay">
+  <div class="blocked-box">
+    <div class="blocked-icon">🔒</div>
+    <h2>Acesso Restrito</h2>
+    <p>Esta área é exclusiva para <strong>gestores</strong>. Entre em contato com a administração se precisar de acesso.</p>
+    <br>
+    <button class="btn btn-primary" onclick="showView('dashboard');document.getElementById('blockedOverlay').classList.add('hidden')">← Voltar ao Dashboard</button>
+  </div>
+</div>
+
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">CONECTANDO…</div>
+</div>
+
+<header>
+  <div class="logo"><img src="icons/marca.png" alt="" style="height:30px;width:auto;background:#fff;border-radius:7px;padding:3px 6px;vertical-align:middle;margin-right:4px;">SANTA RITA <span>/ Endividamento</span></div>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('dashboard')">⊞ Dashboard</button>
+    <button class="nav-tab" onclick="goContratos()">≡ Contratos</button>
+    <button class="nav-tab" id="tab-novo" onclick="goNovoContrato()">＋ Novo Contrato</button>
+    <button class="nav-tab" id="tab-lancamentos" onclick="goLancamentos()">⊙ Lançamentos</button>
+  </nav>
+  <div class="header-right">
+    <div style="display:flex;align-items:center;gap:5px;">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncText" style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(245,240,232,0.45);"></span>
+    </div>
+    <div class="user-chip">
+      <div class="user-avatar" id="userAvatar">R</div>
+      <div>
+        <div class="user-name" id="userName">—</div>
+        <div class="role-tag" id="userRole">—</div>
+      </div>
+    </div>
+    <button onclick="window.location.href='app.html'" style="font-size:11px;padding:5px 13px;background:rgba(200,168,75,0.15);border:1px solid rgba(200,168,75,0.35);border-radius:6px;color:var(--ouro-light);cursor:pointer;font-family:'DM Mono',monospace;letter-spacing:0.04em;font-weight:600;transition:background .2s;margin-right:2px;" onmouseover="this.style.background='rgba(200,168,75,0.28)'" onmouseout="this.style.background='rgba(200,168,75,0.15)'">← Lançamentos</button>
+    <button class="btn-sair" onclick="logout()">⎋ Sair</button>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════
+     VIEW: DASHBOARD
+════════════════════════════════════════════ -->
+<div id="view-dashboard" class="view active">
+<div class="container">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Dashboard de Endividamento</div>
+      <div class="page-subtitle" id="dash-subtitle">Carregando…</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" onclick="loadAll()">↻ Atualizar</button>
+      <button class="btn btn-ouro" id="btn-exportar-dash" onclick="exportarExcel()">↓ Excel</button>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card ouro">
+      <div class="stat-label">Saldo Devedor Total</div>
+      <div class="stat-value money" id="kpi-saldo">—</div>
+      <div class="stat-sub" id="kpi-saldo-sub">—</div>
+    </div>
+    <div class="stat-card danger">
+      <div class="stat-label" id="kpi-ano-label">Vencimentos do ano</div>
+      <div class="stat-value money" id="kpi-2026">—</div>
+      <div class="stat-sub" id="kpi-2026-sub">—</div>
+    </div>
+    <div class="stat-card warn">
+      <div class="stat-label">Próximos 60 dias</div>
+      <div class="stat-value money" id="kpi-60d">—</div>
+      <div class="stat-sub" id="kpi-60d-sub">—</div>
+    </div>
+    <div class="stat-card ok">
+      <div class="stat-label">Parcelas em aberto</div>
+      <div class="stat-value" id="kpi-parcelas">—</div>
+      <div class="stat-sub" id="kpi-parc-sub">—</div>
+    </div>
+  </div>
+
+  <!-- ALERTAS -->
+  <div id="alertas-box" style="margin-bottom:18px;"></div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="dashboard-grid">
+    <div class="dash-card">
+      <div class="dash-card-title">Vencimentos anuais — parcelas (R$)</div>
+      <div class="chart-wrap" style="height:220px;"><canvas id="chartAnual"></canvas></div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-title">Composição por categoria — saldo devedor</div>
+      <div class="chart-wrap" style="height:180px;"><canvas id="chartCat"></canvas></div>
+      <div id="legend-cat" style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;margin-top:10px;color:var(--cinza);"></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="dashboard-grid">
+    <div class="dash-card">
+      <div class="dash-card-title" id="mensal-title">Fluxo mensal — parcelas</div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="chartMensal"></canvas></div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-title">Exposição por credor — saldo devedor</div>
+      <div id="bars-banco" style="margin-top:4px;"></div>
+    </div>
+  </div>
+
+  <!-- TITULARES -->
+  <div class="dash-card" style="margin-bottom:18px;">
+    <div class="dash-card-title">Exposição por titular</div>
+    <div id="bars-titular"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     VIEW: CONTRATOS
+════════════════════════════════════════════ -->
+<div id="view-contratos" class="view">
+<div class="container">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Contratos</div>
+      <div class="page-subtitle" id="contratos-subtitle">—</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" onclick="loadAll()">↻ Atualizar</button>
+      <button class="btn btn-ouro" onclick="goNovoContrato()">＋ Novo Contrato</button>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <div class="filter-group wide"><label>Buscar</label>
+      <input type="text" id="f-busca-c" placeholder="Contrato, modalidade, banco…" oninput="renderContratos()">
+    </div>
+    <div class="filter-group"><label>Titular</label>
+      <select id="f-titular-c" onchange="renderContratos()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <div class="filter-group"><label>Banco</label>
+      <select id="f-banco-c" onchange="renderContratos()">
+        <option value="">Todos</option>
+        <option>BB</option><option>BRADESCO</option><option>BASA</option><option>ITAU</option>
+        <option>CEF</option><option>CNH</option><option>JD</option><option>SICOOB</option>
+      </select>
+    </div>
+    <div class="filter-group"><label>Categoria</label>
+      <select id="f-cat-c" onchange="renderContratos()">
+        <option value="">Todas</option>
+        <option>Custeio</option><option>Investimento</option><option>CPR</option><option>Aditivo</option>
+      </select>
+    </div>
+    <div class="filter-group"><label>Tipo</label>
+      <select id="f-tipo-c" onchange="renderContratos()">
+        <option value="">Todos</option>
+        <option>CURTO PRAZO</option><option>LONGO PRAZO</option>
+      </select>
+    </div>
+    <div style="align-self:flex-end;">
+      <button class="btn btn-secondary btn-sm" onclick="limparFiltrosContratos()">✕ Limpar</button>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <div class="table-toolbar">
+      <span class="table-count" id="contratos-count">—</span>
+      <div style="display:flex;gap:8px;" id="toolbar-gestores">
+        <button class="btn btn-warn btn-sm" id="btn-baixar-parc" style="display:none;" onclick="abrirBaixaEmMassa()">✓ Dar baixa em parcelas</button>
+        <button class="btn btn-danger btn-sm" id="btn-del-contrato" style="display:none;" onclick="deletarContrato()">🗑 Excluir contrato</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr>
+          <th style="width:34px;"><input type="checkbox" id="chk-all-c" onchange="toggleAllContratos(this)"></th>
+          <th onclick="sortContratos('numero_contrato')">Nº Contrato</th>
+          <th onclick="sortContratos('titular')">Titular</th>
+          <th onclick="sortContratos('modalidade')">Modalidade</th>
+          <th onclick="sortContratos('banco')">Banco</th>
+          <th>Categoria</th>
+          <th>Tipo</th>
+          <th onclick="sortContratos('taxa')" style="text-align:right">Taxa</th>
+          <th onclick="sortContratos('saldo_devedor')" style="text-align:right">Saldo Devedor</th>
+          <th onclick="sortContratos('data_fim')">Fim</th>
+          <th style="width:60px;"></th>
+        </tr></thead>
+        <tbody id="tbody-contratos"></tbody>
+      </table>
+      <div class="empty-state" id="empty-contratos" style="display:none;"><div class="empty-icon">◈</div><p>Nenhum contrato encontrado.</p></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     VIEW: NOVO CONTRATO (form)
+════════════════════════════════════════════ -->
+<div id="view-novo" class="view">
+<div class="form-container">
+  <div class="page-header">
+    <div>
+      <div class="page-title" id="form-title">Novo Contrato</div>
+      <div class="page-subtitle">Preencha os dados do contrato de financiamento/custeio/CPR</div>
+    </div>
+  </div>
+  <div class="form-card">
+    <!-- 01 identificação -->
+    <div class="form-section">
+      <div class="section-label">01 — Identificação</div>
+      <div class="form-grid four">
+        <div class="field"><label>Titular <span class="req">★</span></label>
+          <select id="fc-titular"><option value="">Selecionar…</option></select>
+        </div>
+        <div class="field"><label>Nº Contrato <span class="req">★</span></label>
+          <input type="text" id="fc-numero" placeholder="Ex: 4007910">
+        </div>
+        <div class="field"><label>Banco <span class="req">★</span></label>
+          <select id="fc-banco"><option value="">Selecionar…</option><option>BB</option><option>BRADESCO</option><option>BASA</option><option>ITAU</option><option>CEF</option><option>CNH</option><option>JD</option><option>SICOOB</option></select>
+        </div>
+        <div class="field"><label>Moeda</label>
+          <select id="fc-moeda"><option>REAIS</option><option>USD</option><option>SOJA (sc)</option></select>
+        </div>
+      </div>
+    </div>
+    <!-- 02 modalidade -->
+    <div class="form-section">
+      <div class="section-label">02 — Modalidade e Classificação</div>
+      <div class="form-grid">
+        <div class="field"><label>Modalidade <span class="req">★</span></label>
+          <select id="fc-modalidade" onchange="atualizarCategoria()">
+            <option value="">Selecionar…</option>
+            <optgroup label="── CUSTEIO ──">
+              <option>Custeio</option><option>Custeio Pronamp</option><option>FCO RURAL</option>
+            </optgroup>
+            <optgroup label="── INVESTIMENTO ──">
+              <option>Investimento</option><option>Investimento Pronamp</option><option>Moderfrota</option>
+              <option>Inovagro</option><option>Financiamento de Máquinas</option><option>Leasing</option>
+            </optgroup>
+            <optgroup label="── CPR ──"><option>CPR</option></optgroup>
+            <optgroup label="── ADITIVO ──"><option>Aditivo</option></optgroup>
+          </select>
+        </div>
+        <div class="field"><label>Categoria (auto)</label>
+          <input type="text" id="fc-categoria" readonly style="background:var(--creme);color:var(--cinza);">
+        </div>
+        <div class="field"><label>Tipo <span class="req">★</span></label>
+          <select id="fc-tipo"><option value="">Selecionar…</option><option>CURTO PRAZO</option><option>LONGO PRAZO</option></select>
+        </div>
+        <div class="field"><label>Periodicidade</label>
+          <select id="fc-periodicidade"><option>Anual</option><option>Semestral</option><option>Mensal</option><option>Trimestral</option></select>
+        </div>
+        <div class="field"><label>Taxa a.a. (%) <span class="req">★</span></label>
+          <input type="number" id="fc-taxa" placeholder="Ex: 7.5" step="0.01" min="0" max="100">
+        </div>
+        <div class="field"><label>Safra/Ciclo</label>
+          <select id="fc-safra">
+            <option>SAFRA 2024/2025</option><option>SAFRA 2025/2026</option><option>SAFRINHA 2026</option>
+            <option>SAFRA 2026/2027</option><option>SAFRINHA 2027</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <!-- 03 datas e valores -->
+    <div class="form-section">
+      <div class="section-label">03 — Datas e Valores</div>
+      <div class="form-grid four">
+        <div class="field"><label>Data Contratação <span class="req">★</span></label>
+          <input type="date" id="fc-data-contrato">
+        </div>
+        <div class="field"><label>Data Fim Contrato <span class="req">★</span></label>
+          <input type="date" id="fc-data-fim">
+        </div>
+        <div class="field"><label>Saldo Devedor (R$) <span class="req">★</span></label>
+          <div class="valor-wrap"><span class="valor-pre">R$</span>
+            <input type="number" id="fc-saldo" placeholder="0.00" step="0.01" min="0">
+          </div>
+        </div>
+        <div class="field"><label>Valor da Parcela (R$) <span class="req">★</span></label>
+          <div class="valor-wrap"><span class="valor-pre">R$</span>
+            <input type="number" id="fc-parcela" placeholder="0.00" step="0.01" min="0">
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 04 parcelas -->
+    <div class="form-section">
+      <div class="section-label">04 — Parcelas do Contrato</div>
+      <div class="form-grid two" style="margin-bottom:16px;">
+        <div class="field"><label>Quantidade de parcelas <span class="req">★</span></label>
+          <input type="number" id="fc-qtd-parcelas" value="1" min="1" max="120" oninput="gerarParcelasPreview()">
+        </div>
+        <div class="field"><label>Vencimento da 1ª parcela <span class="req">★</span></label>
+          <input type="date" id="fc-venc1" oninput="gerarParcelasPreview()">
+        </div>
+      </div>
+      <div id="parcelas-preview" style="display:none;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--cinza);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Preview das parcelas</div>
+        <div style="overflow-x:auto;max-height:280px;overflow-y:auto;">
+          <table class="parcelas-tbl">
+            <thead><tr><th>#</th><th>Vencimento</th><th>Valor Parcela</th><th>Mês</th></tr></thead>
+            <tbody id="parcelas-tbody-preview"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- 05 obs -->
+    <div class="form-section">
+      <div class="section-label">05 — Observações</div>
+      <div class="field">
+        <textarea id="fc-obs" rows="3" placeholder="Condições especiais, garantias, carência…"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="clearFormContrato()">↺ Limpar</button>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span id="form-feedback" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--sucesso);opacity:0;transition:opacity 0.3s;"></span>
+        <button class="btn btn-primary" id="btn-salvar-contrato" onclick="salvarContrato()">＋ Salvar Contrato</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     VIEW: LANÇAMENTOS (parcelas)
+════════════════════════════════════════════ -->
+<div id="view-lancamentos" class="view">
+<div class="container">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Parcelas / Lançamentos</div>
+      <div class="page-subtitle" id="lanc-subtitle">—</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" onclick="loadAll()">↻ Atualizar</button>
+      <button class="btn btn-secondary" onclick="exportarExcel()">↓ Excel</button>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <div class="filter-group wide"><label>Buscar</label>
+      <input type="text" id="f-busca-l" placeholder="Contrato, titular, banco…" oninput="renderLancamentos()">
+    </div>
+    <div class="filter-group"><label>Status</label>
+      <select id="f-status-l" onchange="renderLancamentos()">
+        <option value="">Todos</option><option>A PAGAR</option><option>PAGO</option>
+      </select>
+    </div>
+    <div class="filter-group"><label>Ano</label>
+      <select id="f-ano-l" onchange="renderLancamentos()">
+        <option value="">Todos</option>
+        <option>ANO 2026</option><option>ANO 2027</option><option>ANO 2028</option>
+        <option>ANO 2029</option><option>ANO 2030</option><option>ANO 2031</option>
+      </select>
+    </div>
+    <div class="filter-group"><label>Titular</label>
+      <select id="f-titular-l" onchange="renderLancamentos()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <div class="filter-group"><label>Banco</label>
+      <select id="f-banco-l" onchange="renderLancamentos()">
+        <option value="">Todos</option>
+        <option>BB</option><option>BRADESCO</option><option>BASA</option><option>ITAU</option>
+        <option>CEF</option><option>CNH</option><option>JD</option><option>SICOOB</option>
+      </select>
+    </div>
+    <div class="filter-group"><label>Mês</label>
+      <select id="f-mes-l" onchange="renderLancamentos()">
+        <option value="">Todos</option>
+        <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+        <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+        <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+        <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+      </select>
+    </div>
+    <div style="align-self:flex-end;">
+      <button class="btn btn-secondary btn-sm" onclick="limparFiltrosLanc()">✕</button>
+    </div>
+  </div>
+
+  <!-- KPIs de totais filtrados -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">
+    <div class="stat-card" style="border-left-color:var(--verde-light);padding:14px 18px;">
+      <div class="stat-label">PARCELAS FILTRADAS</div>
+      <div class="stat-value" id="lkpi-count" style="font-size:22px;">—</div>
+    </div>
+    <div class="stat-card ouro" style="padding:14px 18px;">
+      <div class="stat-label">TOTAL A DESEMBOLSAR</div>
+      <div class="stat-value money" id="lkpi-total" style="font-size:clamp(13px,1.3vw,19px);white-space:nowrap;">—</div>
+    </div>
+    <div class="stat-card danger" style="padding:14px 18px;">
+      <div class="stat-label">A PAGAR</div>
+      <div class="stat-value money" id="lkpi-apagar" style="font-size:clamp(13px,1.3vw,19px);white-space:nowrap;">—</div>
+    </div>
+    <div class="stat-card ok" style="padding:14px 18px;">
+      <div class="stat-label">PAGO</div>
+      <div class="stat-value money" id="lkpi-pago" style="font-size:clamp(13px,1.3vw,19px);white-space:nowrap;">—</div>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <div class="table-toolbar">
+      <span class="table-count" id="lanc-count">—</span>
+      <div style="display:flex;gap:8px;" id="toolbar-lanc-gestores">
+        <button class="btn btn-warn btn-sm" id="btn-baixar-sel" style="display:none;" onclick="abrirBaixaEmMassa()">✓ Baixar selecionados</button>
+        <button class="btn btn-sm" id="btn-excluir-sel" style="display:none;background:#fdedec;border:1.5px solid #e8b4b0;color:#c0392b;" onclick="excluirLancSelecionados()">🗑 Excluir selecionados</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="min-width:1100px;">
+        <thead><tr>
+          <th style="width:34px;"><input type="checkbox" id="chk-all-l" onchange="toggleAllLanc(this)"></th>
+          <th onclick="sortLanc('titular')">Titular</th>
+          <th onclick="sortLanc('banco')">Banco</th>
+          <th onclick="sortLanc('numero_contrato')">Contrato</th>
+          <th onclick="sortLanc('modalidade')">Modalidade</th>
+          <th>Tipo</th>
+          <th onclick="sortLanc('ano')">Ano</th>
+          <th onclick="sortLanc('mes_parcela')" style="text-align:center">Mês</th>
+          <th onclick="sortLanc('data_parcela')">Vencimento</th>
+          <th onclick="sortLanc('valor_parcela')" style="text-align:right;min-width:120px">Parcela</th>
+          <th onclick="sortLanc('saldo_devedor')" style="text-align:right;min-width:110px">Saldo Dev.</th>
+          <th>Status</th>
+          <th style="min-width:70px">Pago em</th>
+          <th style="width:100px;min-width:100px;text-align:center;position:sticky;right:0;background:var(--verde);z-index:2;">Ação</th>
+        </tr></thead>
+        <tbody id="tbody-lancamentos"></tbody>
+      </table>
+      <div class="empty-state" id="empty-lancamentos" style="display:none;"><div class="empty-icon">◈</div><p>Nenhum lançamento encontrado.</p></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ════ MODAL: DETALHE CONTRATO ════ -->
+<div class="modal-overlay" id="modalDetalhe">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-titulo">Contrato</div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--cinza);margin-top:2px;" id="modal-sub"></div>
+      </div>
+      <button class="modal-close" onclick="fecharModal('modalDetalhe')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid" id="modal-detalhe-content"></div>
+      <div style="margin-top:20px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--cinza);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Parcelas deste contrato</div>
+        <div style="overflow-x:auto;max-height:320px;overflow-y:auto;">
+          <table class="parcelas-tbl">
+            <thead><tr><th>Ano</th><th>Mês</th><th>Vencimento</th><th style="text-align:right">Parcela</th><th style="text-align:right">Saldo Dev.</th><th>Status</th><th>Pago em</th></tr></thead>
+            <tbody id="modal-parcelas-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modalDetalhe')">Fechar</button>
+      <button class="btn btn-danger btn-sm" id="modal-btn-del" style="display:none;" onclick="deletarContratoAtual()">🗑 Excluir</button>
+      <button class="btn btn-primary btn-sm" id="modal-btn-edit" style="display:none;" onclick="editarContratoAtual()">✎ Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL: BAIXA EM MASSA ════ -->
+<div class="modal-overlay modal-sm" id="modalBaixa">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Dar Baixa em Parcelas</div>
+      <button class="modal-close" onclick="fecharModal('modalBaixa')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--cinza);margin-bottom:16px;" id="baixa-msg">—</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="field">
+          <label>Data de Pagamento <span class="req">★</span></label>
+          <input type="date" id="baixa-data">
+        </div>
+        <div class="field">
+          <label>Valor Pago (R$) — opcional</label>
+          <div class="valor-wrap">
+            <span class="valor-pre">R$</span>
+            <input type="number" id="baixa-valor" step="0.01" min="0" placeholder="Manter previsto"
+              style="padding-left:36px;" title="Deixe vazio para manter o valor previsto de cada parcela">
+          </div>
+        </div>
+        <div class="field">
+          <label>Juros Pagos (R$) — opcional</label>
+          <div class="valor-wrap">
+            <span class="valor-pre">R$</span>
+            <input type="number" id="baixa-juros" step="0.01" min="0" placeholder="0,00"
+              style="padding-left:36px;" title="Valor de juros dentro do total pago (informativo)">
+          </div>
+        </div>
+        <div class="field">
+          <label>Conta <span class="req">★</span></label>
+          <select id="baixa-conta">
+            <option value="">Selecionar…</option>
+            
+            
+            
+            
+            
+            
+            
+            
+            
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px 12px;background:var(--creme);border-radius:var(--radius-sm);font-family:'DM Mono',monospace;font-size:10px;color:var(--cinza);">
+        Parcelas <strong>A PAGAR</strong> selecionadas → <strong style="color:var(--sucesso);">PAGO</strong>.
+        Se informar valor, ele será aplicado a todas. Sem valor, mantém o previsto de cada parcela.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modalBaixa')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirmar-baixa" onclick="confirmarBaixa()">✓ Confirmar Baixa</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL: BAIXA PARCELA INDIVIDUAL ════ -->
+<div class="modal-overlay modal-sm" id="modalBaixaInd">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Dar Baixa — Parcela Individual</div>
+      <button class="modal-close" onclick="fecharModal('modalBaixaInd')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid" style="grid-template-columns:1fr 1fr;margin-bottom:16px;" id="baixa-ind-detalhe"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;">
+        <div class="field">
+          <label>Data de Pagamento <span class="req">★</span></label>
+          <input type="date" id="baixa-ind-data">
+        </div>
+        <div class="field">
+          <label>Valor Pago (R$) <span class="req">★</span></label>
+          <div class="valor-wrap">
+            <span class="valor-pre">R$</span>
+            <input type="number" id="baixa-ind-valor" step="0.01" min="0" placeholder="0,00"
+              style="padding-left:36px;" title="Deixe igual ao previsto se não houver diferença">
+          </div>
+          <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--cinza);margin-top:3px;">
+            Previsto: <span id="baixa-ind-valor-prev" style="color:var(--verde-light);">—</span>
+          </span>
+        </div>
+        <div class="field">
+          <label>Juros Pagos (R$)</label>
+          <div class="valor-wrap">
+            <span class="valor-pre">R$</span>
+            <input type="number" id="baixa-ind-juros" step="0.01" min="0" placeholder="0,00"
+              style="padding-left:36px;" title="Valor referente a juros dentro do total pago">
+          </div>
+          <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--cinza);margin-top:3px;">
+            Amortização: <span id="baixa-ind-amort">—</span>
+          </span>
+        </div>
+        <div class="field">
+          <label>Conta <span class="req">★</span></label>
+          <select id="baixa-ind-conta">
+            <option value="">Selecionar…</option>
+            
+            
+            
+            
+            
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn btn-secondary" style="border-color:#2563eb;color:#2563eb;" onclick="aditivoAPartirDaBaixa()">⇄ Gerar Aditivo</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-secondary" onclick="fecharModal('modalBaixaInd')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-confirmar-baixa-ind" onclick="confirmarBaixaInd()">✓ Confirmar Baixa</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// CONFIGURAÇÃO SUPABASE
+// ══════════════════════════════════════════════════════
+const SB_URL = (window.APP_CONFIG||{}).SB_URL;
+const SB_KEY = (window.APP_CONFIG||{}).SB_KEY;
+const TB_CONTRATOS  = 'endiv_contratos';
+const TB_LANCAMENTOS = 'endiv_lancamentos';
+
+// ══════════════════════════════════════════════════════
+// SESSÃO E PERFIL
+// ══════════════════════════════════════════════════════
+// Recuperar sessão do sessionStorage ou localStorage (fallback para nova aba)
+var currentUser = sessionStorage.getItem('gf_user') || localStorage.getItem('gf_endiv_user') || '';
+var currentRole = sessionStorage.getItem('gf_role') || localStorage.getItem('gf_endiv_role') || 'gestor';
+if(currentUser) {
+  sessionStorage.setItem('gf_user', currentUser);
+  sessionStorage.setItem('gf_role', currentRole);
+}
+if(!currentUser) { window.location.href = 'index.html'; }
+
+function logout() {
+  sessionStorage.removeItem('gf_user');
+  sessionStorage.removeItem('gf_role');
+  window.location.href = 'index.html';
+}
+
+function isGestor() { return currentRole === 'gestor'; }
+
+function initUI() {
+  document.getElementById('userName').textContent = currentUser;
+  document.getElementById('userAvatar').textContent = currentUser.charAt(0).toUpperCase();
+  document.getElementById('userRole').textContent = isGestor() ? 'GESTOR' : 'FUNCIONÁRIO';
+  // Abas restritas para não-gestores
+  if(!isGestor()) {
+    ['tab-novo','tab-lancamentos'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.classList.add('restricted');
+    });
+    document.getElementById('toolbar-gestores').style.display = 'none';
+    document.getElementById('toolbar-lanc-gestores').style.display = 'none';
+    document.querySelectorAll('[data-gestor]').forEach(el => el.style.display = 'none');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// SUPABASE HELPER
+// ══════════════════════════════════════════════════════
+async function sb(table, opts = {}) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+    ...opts,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=representation',
+      ...(opts.headers || {})
+    }
+  });
+  if(!r.ok) {
+    const txt = await r.text();
+    throw new Error(`${r.status}: ${txt}`);
+  }
+  const t = await r.text();
+  return t ? JSON.parse(t) : [];
+}
+
+// ══════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════════════════════
+var contratos = [];
+var lancamentos = [];
+var contratosFiltrados = [];
+var lancamentosFiltrados = [];
+var sortKeyC = 'titular', sortDirC = 1;
+var sortKeyL = 'data_parcela', sortDirL = 1;
+var contratoAtualId = null;
+var baixaIds = [];
+var baixaIndId = null;
+var editandoContratoId = null;
+var chartsInstances = {};
+
+// ══════════════════════════════════════════════════════
+// CATEGORIZAÇÃO
+// ══════════════════════════════════════════════════════
+function categorizar(modalidade) {
+  const m = (modalidade || '').toLowerCase().trim();
+  if(m.includes('custeio') || m.includes('fco rural')) return 'Custeio';
+  if(m.includes('cpr')) return 'CPR';
+  if(m.includes('aditivo')) return 'Aditivo';
+  return 'Investimento';
+}
+
+function atualizarCategoria() {
+  const mod = document.getElementById('fc-modalidade').value;
+  document.getElementById('fc-categoria').value = mod ? categorizar(mod) : '';
+}
+
+// ══════════════════════════════════════════════════════
+// CARGA DE DADOS
+// ══════════════════════════════════════════════════════
+async function loadAll() {
+  setSyncState('syncing', 'Carregando…');
+  setLoading(true, 'CARREGANDO DADOS…');
+  try {
+    const [c, l] = await Promise.all([
+      sb(`${TB_CONTRATOS}?order=titular.asc&limit=500`),
+      sb(`${TB_LANCAMENTOS}?order=data_parcela.asc&limit=2000`)
+    ]);
+    contratos = c;
+    lancamentos = l;
+    setSyncState('online', `${contratos.length} contratos`);
+    renderDashboard();
+    renderContratos();
+    renderLancamentos();
+    document.getElementById('dash-subtitle').textContent =
+      `${contratos.length} contratos · ${lancamentos.length} parcelas · atualizado agora`;
+  } catch(e) {
+    setSyncState('error', 'Erro ao carregar dados');
+    showToast('⚠ Erro ao conectar ao banco: ' + e.message, 'err');
+    setLoading(false);
+    return;
+  }
+  setLoading(false);
+}
+
+// ══════════════════════════════════════════════════════
+// (dados de demonstração removidos)
+// ══════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════
+function renderDashboard() {
+  var hoje = new Date();
+  var d60 = new Date(hoje); d60.setDate(d60.getDate() + 60);
+  var d60str = d60.toISOString().slice(0,10);
+  var hojeStr = hoje.toISOString().slice(0,10);
+
+  var abertos = lancamentos.filter(function(l){ return l.status === 'A PAGAR'; });
+  // Saldo devedor = soma das parcelas ainda A PAGAR (atualiza conforme baixas)
+  var saldo = abertos.reduce(function(s,l){ return s + (+l.valor_parcela||0); }, 0);
+  var ANO_REF = new Date().getFullYear();
+  document.getElementById('kpi-ano-label').textContent = 'Vencimentos ' + ANO_REF;
+  document.getElementById('mensal-title').textContent = 'Fluxo mensal ' + ANO_REF + ' — parcelas';
+  var parc2026 = lancamentos.filter(function(l){ return l.ano === 'ANO ' + ANO_REF && l.status === 'A PAGAR'; });
+  var val2026 = parc2026.reduce(function(s,l){ return s + (+l.valor_parcela||0); }, 0);
+  var prox60 = abertos.filter(function(l){ return l.data_parcela <= d60str; });
+  var valProx60 = prox60.reduce(function(s,l){ return s + (+l.valor_parcela||0); }, 0);
+
+  document.getElementById('kpi-saldo').textContent = fmtMoeda(saldo);
+  document.getElementById('kpi-saldo-sub').textContent = contratos.length + ' contratos ativos';
+  document.getElementById('kpi-2026').textContent = fmtMoeda(val2026);
+  document.getElementById('kpi-2026-sub').textContent = parc2026.length + ' parcelas a vencer';
+  document.getElementById('kpi-60d').textContent = fmtMoeda(valProx60);
+  document.getElementById('kpi-60d-sub').textContent = prox60.length + ' parcelas próximas';
+  document.getElementById('kpi-parcelas').textContent = abertos.length;
+  document.getElementById('kpi-parc-sub').textContent = 'de ' + lancamentos.length + ' lançamentos';
+
+  renderAlertas(abertos, hojeStr, d60str);
+  renderChartAnual();
+  renderChartCat();
+  renderChartMensal();
+  renderBarsBanco();
+  renderBarsTitular();
+}
+
+function renderAlertas(abertos, hojeStr, d60str) {
+  var box = document.getElementById('alertas-box');
+  var html = '';
+  var vencidas = abertos.filter(function(l){ return l.data_parcela < hojeStr; });
+  var prox30 = abertos.filter(function(l){ return l.data_parcela >= hojeStr && l.data_parcela <= new Date(new Date().getTime()+30*864e5).toISOString().slice(0,10); });
+
+  if(vencidas.length > 0) {
+    var valVenc = vencidas.reduce(function(s,l){return s+(+l.valor_parcela||0);},0);
+    html += alerta('danger','⚠', vencidas.length + ' parcela(s) vencida(s) sem baixa — ' + fmtMoeda(valVenc) + ' a regularizar');
+  }
+  if(prox30.length > 0) {
+    var valP30 = prox30.reduce(function(s,l){return s+(+l.valor_parcela||0);},0);
+    html += alerta('warn','📅', prox30.length + ' parcela(s) vencem em 30 dias — ' + fmtMoeda(valP30));
+  }
+  // Alertas calculados a partir das parcelas em aberto
+  var total = abertos.reduce(function(s,l){return s+(+l.valor_parcela||0);},0);
+  if(total > 0) {
+    var MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    var porMes = {}, porBanco = {};
+    abertos.forEach(function(l){
+      var v = +l.valor_parcela||0;
+      var k = (l.data_parcela||'').slice(0,7); if(k) porMes[k] = (porMes[k]||0) + v;
+      var b = l.banco || '—'; porBanco[b] = (porBanco[b]||0) + v;
+    });
+    var picoMes = Object.keys(porMes).sort(function(a,b){return porMes[b]-porMes[a];})[0];
+    if(picoMes) html += alerta('danger','🔴', 'Maior concentração: ' + MESES[+picoMes.slice(5,7)-1] + '/' + picoMes.slice(0,4) + ' com ' + fmtMoeda(porMes[picoMes]) + ' (' + (porMes[picoMes]/total*100).toFixed(1).replace('.',',') + '% do saldo em aberto) — atenção ao fluxo de caixa');
+    var bancos = Object.keys(porBanco).sort(function(a,b){return porBanco[b]-porBanco[a];});
+    html += alerta('info','🏦', bancos.slice(0,3).map(function(b){ return b + ' ' + (porBanco[b]/total*100).toFixed(1).replace('.',',') + '%'; }).join(' · ') + ' do saldo em aberto.');
+  }
+  box.innerHTML = html;
+}
+
+function alerta(tipo, icon, msg) {
+  return '<div class="alert alert-'+tipo+'"><span class="alert-icon">'+icon+'</span><span>'+msg+'</span></div>';
+}
+
+function destroyChart(id) {
+  if(chartsInstances[id]) { chartsInstances[id].destroy(); delete chartsInstances[id]; }
+}
+
+function renderChartAnual() {
+  destroyChart('chartAnual');
+  var a0 = new Date().getFullYear();
+  var labels = [], anos = [];
+  var anoMax = lancamentos.reduce(function(m,l){ var y = parseInt((l.ano||'').replace(/\D/g,'')); return y > m ? y : m; }, a0 + 5);
+  for(var y = a0; y <= Math.min(anoMax, a0 + 14); y++) { labels.push(String(y)); anos.push('ANO ' + y); }
+  var cpData = [], lpData = [];
+  anos.forEach(function(a) {
+    cpData.push(lancamentos.filter(function(l){return l.ano===a&&l.tipo==='CURTO PRAZO';}).reduce(function(s,l){return s+(+l.valor_parcela||0);},0)/1e6);
+    lpData.push(lancamentos.filter(function(l){return l.ano===a&&l.tipo==='LONGO PRAZO';}).reduce(function(s,l){return s+(+l.valor_parcela||0);},0)/1e6);
+  });
+  chartsInstances['chartAnual'] = new Chart(document.getElementById('chartAnual'), {
+    type:'bar',
+    data:{labels:labels,datasets:[
+      {label:'Curto Prazo',data:cpData,backgroundColor:'#c0392b88',borderRadius:4,stack:'s'},
+      {label:'Longo Prazo',data:lpData,backgroundColor:'#2d5c3f88',borderRadius:4,stack:'s'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{color:'#8a8a7a'},grid:{display:false}},y:{stacked:true,ticks:{color:'#8a8a7a',callback:function(v){return 'R$'+v.toFixed(0)+'M';}},grid:{color:'rgba(26,58,42,0.06)'}}}}
+  });
+}
+
+function renderChartCat() {
+  destroyChart('chartCat');
+  var cats = ['Investimento','Custeio','Aditivo','CPR'];
+  var colors = ['#2d5c3f','#c8a84b','#c0392b','#8a8a7a'];
+  var data = cats.map(function(c) {
+    return lancamentos.filter(function(x){return x.categoria===c;}).reduce(function(s,x){return s+(+x.saldo_devedor||0);},0)/1e6;
+  });
+  chartsInstances['chartCat'] = new Chart(document.getElementById('chartCat'), {
+    type:'doughnut',
+    data:{labels:cats,datasets:[{data:data,backgroundColor:colors,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+  });
+  var total = data.reduce(function(s,v){return s+v;},0);
+  var leg = document.getElementById('legend-cat');
+  leg.innerHTML = cats.map(function(c,i){
+    var pct = total > 0 ? (data[i]/total*100).toFixed(0) : 0;
+    return '<span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:2px;background:'+colors[i]+';"></span>'+c+' '+pct+'%</span>';
+  }).join('');
+}
+
+function renderChartMensal() {
+  destroyChart('chartMensal');
+  var dados = [];
+  for(var m=1;m<=12;m++) {
+    dados.push(lancamentos.filter(function(l){return l.ano==='ANO '+new Date().getFullYear()&&l.mes_parcela===m;}).reduce(function(s,l){return s+(+l.valor_parcela||0);},0)/1e6);
+  }
+  chartsInstances['chartMensal'] = new Chart(document.getElementById('chartMensal'), {
+    type:'bar',
+    data:{labels:['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],datasets:[{
+      data:dados,
+      backgroundColor:dados.map(function(v){return v>15?'#c0392b99':'#2d5c3f88';}),
+      borderRadius:4
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8a8a7a',autoSkip:false,maxRotation:0,font:{size:10}},grid:{display:false}},y:{ticks:{color:'#8a8a7a',callback:function(v){return 'R$'+v.toFixed(0)+'M';}},grid:{color:'rgba(26,58,42,0.06)'}}}}
+  });
+}
+
+function renderBarsBanco() {
+  var bancos = ['BB','BRADESCO','BASA','ITAU','CNH','CEF','JD','SICOOB'];
+  var colors = ['#2d5c3f','#7F77DD','#5DCAA5','#EF9F27','#D85A30','#378ADD','#C0DD97','#D3D1C7'];
+  var dados = bancos.map(function(b) {
+    return lancamentos.filter(function(l){return l.banco===b;}).reduce(function(s,l){return s+(+l.saldo_devedor||0);},0);
+  }).filter(function(v){return v>0;});
+  var bancosAtivos = bancos.filter(function(b) {
+    return lancamentos.some(function(l){return l.banco===b&&(+l.saldo_devedor||0)>0;});
+  });
+  var max = Math.max.apply(null, dados);
+  var html = bancosAtivos.map(function(b,i) {
+    var v = dados[i];
+    var pct = max > 0 ? (v/max*100).toFixed(1) : 0;
+    return '<div class="bar-row"><div class="bar-label">'+b+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+colors[i]+';color:#fff;">'+fmtMoedaK(v)+'</div></div></div>';
+  }).join('');
+  document.getElementById('bars-banco').innerHTML = html;
+}
+
+function renderBarsTitular() {
+  var titulares = ((window.CAD||{}).titulares||[]).slice();
+  (lancamentos||[]).forEach(function(l){ if(l.titular && titulares.indexOf(l.titular)<0) titulares.push(l.titular); });
+  var cats = ['Investimento','Custeio','Aditivo','CPR'];
+  var colors = {'Investimento':'#2d5c3f','Custeio':'#c8a84b','Aditivo':'#c0392b','CPR':'#8a8a7a'};
+  var html = titulares.map(function(t) {
+    var total = lancamentos.filter(function(l){return l.titular===t;}).reduce(function(s,l){return s+(+l.saldo_devedor||0);},0);
+    var nContr = contratos.filter(function(c){return c.titular===t;}).length;
+    if(total === 0) return '';
+    var maxTotal = lancamentos.reduce(function(mx,l){return (+l.saldo_devedor||0)>mx?(+l.saldo_devedor||0):mx;},0)*4;
+    var barPct = maxTotal > 0 ? (total/maxTotal*100) : 0;
+    var catBars = cats.map(function(cat) {
+      var v = lancamentos.filter(function(l){return l.titular===t&&l.categoria===cat;}).reduce(function(s,l){return s+(+l.saldo_devedor||0);},0);
+      var pct = total > 0 ? (v/total*100) : 0;
+      return pct > 0 ? '<div style="height:6px;width:'+pct+'%;background:'+colors[cat]+';display:inline-block;border-radius:2px;margin-right:2px;" title="'+cat+': '+fmtMoeda(v)+'"></div>' : '';
+    }).join('');
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--creme-dark);font-size:13px;">'
+      +'<div style="min-width:80px;font-weight:500;">'+t+'</div>'
+      +'<div style="flex:1;">'
+        +'<div style="display:flex;gap:4px;margin-bottom:4px;">'+catBars+'</div>'
+        +'<div style="font-family:\'DM Mono\',monospace;font-size:12px;color:var(--verde);">'+fmtMoeda(total)+'</div>'
+      +'</div>'
+      +'<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--cinza);">'+nContr+' contratos</div>'
+      +'</div>';
+  }).join('');
+  document.getElementById('bars-titular').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════
+// CONTRATOS
+// ══════════════════════════════════════════════════════
+function renderContratos() {
+  var busca = (document.getElementById('f-busca-c').value||'').toLowerCase();
+  var titular = document.getElementById('f-titular-c').value;
+  var banco = document.getElementById('f-banco-c').value;
+  var cat = document.getElementById('f-cat-c').value;
+  var tipo = document.getElementById('f-tipo-c').value;
+
+  contratosFiltrados = contratos.filter(function(c) {
+    if(busca && !(c.numero_contrato||'').toLowerCase().includes(busca) && !(c.modalidade||'').toLowerCase().includes(busca) && !(c.banco||'').toLowerCase().includes(busca)) return false;
+    if(titular && c.titular !== titular) return false;
+    if(banco && c.banco !== banco) return false;
+    if(cat && c.categoria !== cat) return false;
+    if(tipo && c.tipo !== tipo) return false;
+    return true;
+  });
+
+  contratosFiltrados.sort(function(a,b) {
+    var av = a[sortKeyC]||'', bv = b[sortKeyC]||'';
+    if(sortKeyC==='taxa'||sortKeyC==='saldo_devedor'){av=+av;bv=+bv;}
+    return av<bv?-sortDirC:av>bv?sortDirC:0;
+  });
+
+  document.getElementById('contratos-count').textContent = contratosFiltrados.length + ' contrato(s)';
+  document.getElementById('contratos-subtitle').textContent = contratos.length + ' contratos no total — ' + contratosFiltrados.length + ' exibidos';
+
+  var tbody = document.getElementById('tbody-contratos');
+  tbody.innerHTML = contratosFiltrados.map(function(c) {
+    var vencida = c.data_fim < new Date().toISOString().slice(0,10);
+    return '<tr onclick="abrirDetalheContrato('+c.id+')">'
+      +'<td onclick="event.stopPropagation()"><input type="checkbox" class="chk-c" data-id="'+c.id+'" onchange="checkSelContratos()"></td>'
+      +'<td class="mono" style="color:var(--cinza)">'+esc(c.numero_contrato)+'</td>'
+      +'<td style="font-weight:500">'+esc(c.titular)+'</td>'
+      +'<td>'+esc(c.modalidade)+'</td>'
+      +'<td><strong>'+esc(c.banco)+'</strong></td>'
+      +'<td><span class="badge badge-'+c.categoria.toLowerCase().replace(' ','')+'">'+c.categoria+'</span></td>'
+      +'<td><span class="badge '+(c.tipo==='CURTO PRAZO'?'badge-cp':'badge-lp')+'">'+c.tipo+'</span></td>'
+      +'<td class="mono" style="text-align:right">'+(+c.taxa*100).toFixed(2)+'%</td>'
+      +'<td class="mono" style="text-align:right">'+fmtMoeda(
+        lancamentos.filter(function(l){return l.contrato_id===c.id&&l.status==='A PAGAR';})
+                   .reduce(function(s,l){return s+(+l.valor_parcela||0);},0)
+      )+'</td>'
+      +'<td class="mono" style="color:'+(vencida?'var(--erro)':'')+'">'+fmtData(c.data_fim)+'</td>'
+      +'<td><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();abrirDetalheContrato('+c.id+')">Ver</button></td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('empty-contratos').style.display = contratosFiltrados.length ? 'none' : 'block';
+}
+
+function sortContratos(key) {
+  if(sortKeyC === key) sortDirC *= -1; else { sortKeyC = key; sortDirC = 1; }
+  renderContratos();
+}
+
+function toggleAllContratos(chk) {
+  document.querySelectorAll('.chk-c').forEach(function(c){ c.checked = chk.checked; });
+  checkSelContratos();
+}
+
+function checkSelContratos() {
+  var sels = document.querySelectorAll('.chk-c:checked');
+  document.getElementById('btn-del-contrato').style.display = sels.length > 0 ? '' : 'none';
+}
+
+function limparFiltrosContratos() {
+  ['f-busca-c','f-titular-c','f-banco-c','f-cat-c','f-tipo-c'].forEach(function(id){ document.getElementById(id).value=''; });
+  renderContratos();
+}
+
+function abrirDetalheContrato(id) {
+  var c = contratos.find(function(x){return x.id===id;});
+  if(!c) return;
+  contratoAtualId = id;
+
+  document.getElementById('modal-titulo').textContent = 'Contrato ' + c.numero_contrato;
+  document.getElementById('modal-sub').textContent = c.titular + ' — ' + c.banco + ' — ' + c.modalidade;
+
+  var html = [
+    di('Titular', c.titular),
+    di('Banco', c.banco),
+    di('Nº Contrato', c.numero_contrato),
+    di('Modalidade', c.modalidade),
+    di('Categoria', '<span class="badge badge-'+c.categoria.toLowerCase().replace(' ','')+'">'+c.categoria+'</span>'),
+    di('Tipo', '<span class="badge '+(c.tipo==='CURTO PRAZO'?'badge-cp':'badge-lp')+'">'+c.tipo+'</span>'),
+    di('Taxa a.a.', (c.taxa*100).toFixed(2)+'%'),
+    di('Saldo Devedor (A Pagar)', fmtMoeda(
+      lancamentos
+        .filter(function(l){ return l.contrato_id===c.id && l.status==='A PAGAR'; })
+        .reduce(function(s,l){ return s+(+l.valor_parcela||0); }, 0)
+    )),
+    di('Periodicidade', c.periodicidade),
+    di('Moeda', c.moeda),
+    di('Contratação', fmtData(c.data_contrato)),
+    di('Fim', fmtData(c.data_fim)),
+  ].join('');
+  if(c.obs) html += '<div class="di full"><div class="dl">Observações</div><div class="dv" style="font-size:13px;">'+esc(c.obs)+'</div></div>';
+  document.getElementById('modal-detalhe-content').innerHTML = html;
+
+  // Parcelas do contrato
+  var parcelas = lancamentos.filter(function(l){return l.contrato_id === id;});
+  parcelas.sort(function(a,b){return a.data_parcela<b.data_parcela?-1:1;});
+  var hojeStr = new Date().toISOString().slice(0,10);
+  var tbodyHtml = parcelas.map(function(l) {
+    var cls = l.status==='PAGO' ? 'tr-paga' : (l.data_parcela < hojeStr ? 'tr-vencida' : '');
+    var baixaBtn = isGestor()
+      ? (l.status==='A PAGAR'
+          ? '<button class="btn btn-warn btn-sm" onclick="event.stopPropagation();abrirBaixaInd('+l.id+')">Baixar</button>'
+          : '<button class="btn btn-secondary btn-sm" style="color:#c0392b;border-color:#c0392b;font-size:10px;" onclick="event.stopPropagation();desfazerBaixa('+l.id+')">↺ Desfazer</button>')
+      : '';
+    return '<tr class="'+cls+'">'
+      +'<td>'+l.ano+'</td>'
+      +'<td class="mono" style="text-align:center">'+l.mes_parcela+'</td>'
+      +'<td class="mono">'+fmtData(l.data_parcela)+'</td>'
+      +'<td class="mono" style="text-align:right">'+fmtMoeda(l.valor_parcela)+'</td>'
+      +'<td class="mono" style="text-align:right">'+fmtMoeda(l.saldo_devedor)+'</td>'
+      +'<td><span class="badge '+(l.status==='PAGO'?'badge-ativa':'badge-cp')+'">'+l.status+'</span></td>'
+      +'<td class="mono">'+fmtData(l.data_pagamento)+'</td>'
+      +'<td style="text-align:center;white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-2px 0 6px rgba(0,0,0,0.06);">'+baixaBtn+'</td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('modal-parcelas-tbody').innerHTML = tbodyHtml || '<tr><td colspan="8" style="text-align:center;color:var(--cinza);font-size:13px;padding:20px;">Nenhuma parcela cadastrada</td></tr>';
+
+  // Botões gestor
+  document.getElementById('modal-btn-del').style.display = isGestor() ? '' : 'none';
+  document.getElementById('modal-btn-edit').style.display = isGestor() ? '' : 'none';
+
+  document.getElementById('modalDetalhe').classList.add('open');
+}
+
+function deletarContratoAtual() {
+  if(!contratoAtualId) return;
+  if(!confirm('Excluir este contrato e todas as suas parcelas? Esta ação não pode ser desfeita.')) return;
+  contratos = contratos.filter(function(c){return c.id !== contratoAtualId;});
+  lancamentos = lancamentos.filter(function(l){return l.contrato_id !== contratoAtualId;});
+  fecharModal('modalDetalhe');
+  renderContratos();
+  renderLancamentos();
+  renderDashboard();
+  showToast('✓ Contrato excluído');
+}
+
+function editarContratoAtual() {
+  if(!contratoAtualId) return;
+  fecharModal('modalDetalhe');
+  goEditarContrato(contratoAtualId);
+}
+
+function deletarContrato() {
+  var sels = [...document.querySelectorAll('.chk-c:checked')];
+  if(!sels.length) return;
+  if(!confirm('Excluir '+sels.length+' contrato(s) e suas parcelas?')) return;
+  sels.forEach(function(chk) {
+    var id = +chk.dataset.id;
+    contratos = contratos.filter(function(c){return c.id!==id;});
+    lancamentos = lancamentos.filter(function(l){return l.contrato_id!==id;});
+  });
+  renderContratos();
+  renderLancamentos();
+  renderDashboard();
+  showToast('✓ Excluído(s)');
+}
+
+// ══════════════════════════════════════════════════════
+// LANÇAMENTOS
+// ══════════════════════════════════════════════════════
+function renderLancamentos() {
+  var busca = (document.getElementById('f-busca-l').value||'').toLowerCase();
+  var status = document.getElementById('f-status-l').value;
+  var ano = document.getElementById('f-ano-l').value;
+  var titular = document.getElementById('f-titular-l').value;
+  var banco = document.getElementById('f-banco-l').value;
+  var mes = document.getElementById('f-mes-l').value;
+
+  lancamentosFiltrados = lancamentos.filter(function(l) {
+    if(busca && !(l.numero_contrato||'').toLowerCase().includes(busca) && !(l.titular||'').toLowerCase().includes(busca) && !(l.banco||'').toLowerCase().includes(busca)) return false;
+    if(status && l.status !== status) return false;
+    if(ano && l.ano !== ano) return false;
+    if(titular && l.titular !== titular) return false;
+    if(banco && l.banco !== banco) return false;
+    if(mes && String(l.mes_parcela) !== mes) return false;
+    return true;
+  });
+
+  lancamentosFiltrados.sort(function(a,b) {
+    var av = a[sortKeyL]||'', bv = b[sortKeyL]||'';
+    if(sortKeyL==='valor_parcela'||sortKeyL==='saldo_devedor'||sortKeyL==='mes_parcela'){av=+av;bv=+bv;}
+    return av<bv?-sortDirL:av>bv?sortDirL:0;
+  });
+
+  document.getElementById('lanc-count').textContent = lancamentosFiltrados.length + ' lançamento(s)';
+  document.getElementById('lanc-subtitle').textContent = lancamentos.length + ' total — ' + lancamentosFiltrados.length + ' exibidos';
+
+  // ── KPIs de totais filtrados ──
+  var totalVal  = lancamentosFiltrados.reduce(function(s,l){ return s+(+l.valor_parcela||0); }, 0);
+  var apagarVal = lancamentosFiltrados.filter(function(l){ return l.status==='A PAGAR'; }).reduce(function(s,l){ return s+(+l.valor_parcela||0); }, 0);
+  var pagoVal   = lancamentosFiltrados.filter(function(l){ return l.status==='PAGO'; }).reduce(function(s,l){ return s+(+l.valor_parcela||0); }, 0);
+  document.getElementById('lkpi-count').textContent  = lancamentosFiltrados.length.toLocaleString('pt-BR');
+  document.getElementById('lkpi-total').textContent  = fmtMoeda(totalVal);
+  document.getElementById('lkpi-apagar').textContent = fmtMoeda(apagarVal);
+  document.getElementById('lkpi-pago').textContent   = fmtMoeda(pagoVal);
+
+  var hojeStr = new Date().toISOString().slice(0,10);
+  var tbody = document.getElementById('tbody-lancamentos');
+  tbody.innerHTML = lancamentosFiltrados.map(function(l) {
+    var vencida = l.status==='A PAGAR' && l.data_parcela < hojeStr;
+    var baixaBtn = isGestor()
+      ? (l.status==='A PAGAR'
+          ? '<button class="btn btn-warn" style="padding:4px 10px;font-size:10px;" onclick="event.stopPropagation();abrirBaixaInd('+l.id+')">↓ Baixa</button>'
+            + ' <button class="btn btn-secondary" style="padding:4px 10px;font-size:10px;" onclick="event.stopPropagation();abrirEditarLanc('+l.id+')">✎ Editar</button>'
+          : '<button class="btn btn-secondary" style="padding:4px 10px;font-size:10px;color:#c0392b;border-color:#c0392b;" onclick="event.stopPropagation();desfazerBaixa('+l.id+')">↺ Desfazer</button>'
+            + ' <button class="btn btn-secondary" style="padding:4px 10px;font-size:10px;" onclick="event.stopPropagation();abrirEditarLanc('+l.id+')">✎ Editar</button>')
+      : '';
+    return '<tr style="'+(vencida?'background:#fff9f9':'')+'">'
+      +'<td onclick="event.stopPropagation()"><input type="checkbox" class="chk-l" data-id="'+l.id+'" onchange="checkSelLanc()"></td>'
+      +'<td style="font-weight:500">'+esc(l.titular)+'</td>'
+      +'<td><strong>'+esc(l.banco)+'</strong></td>'
+      +'<td class="mono" style="color:var(--cinza)">'+esc(l.numero_contrato)+'</td>'
+      +'<td style="max-width:160px">'+esc(l.modalidade)+'</td>'
+      +'<td><span class="badge '+(l.tipo==='CURTO PRAZO'?'badge-cp':'badge-lp')+'">'+abrevTipo(l.tipo)+'</span></td>'
+      +'<td class="mono" style="font-size:11px;">'+l.ano+'</td>'
+      +'<td class="mono" style="text-align:center">'+l.mes_parcela+'</td>'
+      +'<td class="mono" style="color:'+(vencida?'var(--erro)':'')+'">'+fmtData(l.data_parcela)+'</td>'
+      +'<td class="mono" style="text-align:right">'+fmtMoeda(l.valor_parcela)+'</td>'
+      +'<td class="mono" style="text-align:right;color:var(--cinza)">'+fmtMoeda(l.saldo_devedor)+'</td>'
+      +'<td><span class="badge '+(l.status==='PAGO'?'badge-ativa':'badge-cp')+'">'+l.status+'</span></td>'
+      +'<td class="mono">'+fmtData(l.data_pagamento)+'</td>'
+      +'<td style="text-align:center;white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-2px 0 6px rgba(0,0,0,0.06);">'+baixaBtn+'</td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('empty-lancamentos').style.display = lancamentosFiltrados.length ? 'none' : 'block';
+}
+
+function sortLanc(key) {
+  if(sortKeyL===key) sortDirL*=-1; else{sortKeyL=key;sortDirL=1;}
+  renderLancamentos();
+}
+
+function toggleAllLanc(chk) {
+  document.querySelectorAll('.chk-l').forEach(function(c){ c.checked = chk.checked; });
+  checkSelLanc();
+}
+
+function checkSelLanc() {
+  var sels = document.querySelectorAll('.chk-l:checked');
+  var mostrar = sels.length > 0 && isGestor() ? '' : 'none';
+  document.getElementById('btn-baixar-sel').style.display = mostrar;
+  var btnEx = document.getElementById('btn-excluir-sel');
+  if(btnEx) btnEx.style.display = mostrar;
+}
+
+// Exclui as parcelas selecionadas (com dupla confirmação — apaga do banco)
+async function excluirLancSelecionados() {
+  if(!isGestor()) { showBlockedMsg(); return; }
+  var ids = Array.from(document.querySelectorAll('.chk-l:checked')).map(function(c){ return parseInt(c.dataset.id); });
+  if(!ids.length) { showToast('Nenhuma parcela selecionada', 'warn'); return; }
+
+  // Monta um resumo do que será excluído, para o gestor conferir
+  var itens = ids.map(function(id){ return lancamentos.find(function(x){ return x.id===id; }); }).filter(Boolean);
+  var soma = itens.reduce(function(s,l){ return s + (+l.valor_parcela||0); }, 0);
+  var resumo = itens.slice(0,8).map(function(l){
+    return '• ' + (l.modalidade||'') + ' ' + (l.ano||'') + ' — R$ ' + (+l.valor_parcela||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  }).join('\n');
+  if(itens.length > 8) resumo += '\n… e mais ' + (itens.length-8) + ' parcela(s)';
+
+  if(!confirm('EXCLUIR ' + ids.length + ' parcela(s)?\n\n' + resumo +
+    '\n\nTotal: R$ ' + soma.toLocaleString('pt-BR',{minimumFractionDigits:2}) +
+    '\n\n⚠ Esta ação NÃO pode ser desfeita.')) return;
+
+  // Segunda confirmação, mais enfática
+  if(!confirm('Tem certeza? As parcelas serão apagadas permanentemente do banco de dados.')) return;
+
+  showToast('🗑 Excluindo…');
+  try {
+    // Apaga em uma requisição usando filtro OR (ou uma a uma, se necessário)
+    var filtro = ids.map(function(id){ return 'id.eq.' + id; }).join(',');
+    await sb(TB_LANCAMENTOS + '?or=(' + filtro + ')', { method:'DELETE', prefer:'return=minimal' });
+    // Remove do cache local
+    lancamentos = lancamentos.filter(function(l){ return ids.indexOf(l.id) < 0; });
+    var ca = document.getElementById('chk-all-l'); if(ca) ca.checked = false;
+    renderLancamentos();
+    if(typeof renderContratos==='function') renderContratos();
+    if(typeof renderDashboard==='function') renderDashboard();
+    showToast('✓ ' + ids.length + ' parcela(s) excluída(s)');
+  } catch(e) {
+    showToast('⚠ Erro ao excluir: ' + e.message, 'err');
+  }
+}
+
+function limparFiltrosLanc() {
+  ['f-busca-l','f-status-l','f-ano-l','f-titular-l','f-banco-l','f-mes-l'].forEach(function(id){ document.getElementById(id).value=''; });
+  renderLancamentos();
+}
+
+// ══════════════════════════════════════════════════════
+// NOVO / EDITAR CONTRATO
+// ══════════════════════════════════════════════════════
+function goNovoContrato() {
+  if(!isGestor()) { showBlockedMsg(); return; }
+  editandoContratoId = null;
+  clearFormContrato();
+  document.getElementById('form-title').textContent = 'Novo Contrato';
+  showView('novo');
+}
+
+function goEditarContrato(id) {
+  if(!isGestor()) { showBlockedMsg(); return; }
+  var c = contratos.find(function(x){return x.id===id;});
+  if(!c) return;
+  editandoContratoId = id;
+  document.getElementById('form-title').textContent = 'Editar Contrato #' + c.numero_contrato;
+  document.getElementById('fc-titular').value = c.titular;
+  document.getElementById('fc-numero').value = c.numero_contrato;
+  document.getElementById('fc-banco').value = c.banco;
+  document.getElementById('fc-moeda').value = c.moeda || 'REAIS';
+  document.getElementById('fc-modalidade').value = c.modalidade;
+  document.getElementById('fc-categoria').value = c.categoria;
+  document.getElementById('fc-tipo').value = c.tipo;
+  document.getElementById('fc-periodicidade').value = c.periodicidade || 'Anual';
+  document.getElementById('fc-taxa').value = +(c.taxa*100).toFixed(4);
+  document.getElementById('fc-data-contrato').value = c.data_contrato;
+  document.getElementById('fc-data-fim').value = c.data_fim;
+  document.getElementById('fc-saldo').value = c.saldo_devedor;
+  document.getElementById('fc-obs').value = c.obs || '';
+  showView('novo');
+}
+
+function clearFormContrato() {
+  ['fc-titular','fc-numero','fc-banco','fc-modalidade','fc-categoria','fc-tipo','fc-data-contrato','fc-data-fim','fc-obs'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.value='';
+  });
+  document.getElementById('fc-moeda').value = 'REAIS';
+  document.getElementById('fc-periodicidade').value = 'Anual';
+  document.getElementById('fc-taxa').value = '';
+  document.getElementById('fc-saldo').value = '';
+  document.getElementById('fc-parcela').value = '';
+  document.getElementById('fc-qtd-parcelas').value = '1';
+  document.getElementById('fc-venc1').value = '';
+  document.getElementById('parcelas-preview').style.display = 'none';
+}
+
+function gerarParcelasPreview() {
+  var n = parseInt(document.getElementById('fc-qtd-parcelas').value) || 1;
+  var venc1 = document.getElementById('fc-venc1').value;
+  var vParc = parseFloat(document.getElementById('fc-parcela').value) || 0;
+  var box = document.getElementById('parcelas-preview');
+  if(n <= 1 && !venc1) { box.style.display='none'; return; }
+  box.style.display = '';
+  var rows = '';
+  for(var i=0;i<Math.min(n,36);i++) {
+    var d = '';
+    if(venc1) {
+      var dt = new Date(venc1+'T12:00:00');
+      dt.setMonth(dt.getMonth() + i);
+      d = dt.toISOString().slice(0,10);
+    }
+    rows += '<tr><td>'+(i+1)+'/'+n+'</td>'
+      +'<td class="mono">'+fmtData(d)+'</td>'
+      +'<td class="mono" style="text-align:right">'+fmtMoeda(vParc)+'</td>'
+      +'<td class="mono" style="color:var(--cinza)">'+(d?(''+new Date(d+'T12:00:00').getFullYear()):'-')+'</td></tr>';
+  }
+  if(n > 36) rows += '<tr><td colspan="4" style="text-align:center;color:var(--cinza);font-size:12px;padding:8px;">… e mais '+(n-36)+' parcelas</td></tr>';
+  document.getElementById('parcelas-tbody-preview').innerHTML = rows;
+}
+
+async function salvarContrato() {
+  if(!isGestor()) { showBlockedMsg(); return; }
+  var titular = document.getElementById('fc-titular').value;
+  var numero = document.getElementById('fc-numero').value.trim();
+  var banco = document.getElementById('fc-banco').value;
+  var modalidade = document.getElementById('fc-modalidade').value;
+  var tipo = document.getElementById('fc-tipo').value;
+  var taxa = parseFloat(document.getElementById('fc-taxa').value);
+  var dataC = document.getElementById('fc-data-contrato').value;
+  var dataF = document.getElementById('fc-data-fim').value;
+  var saldo = parseFloat(document.getElementById('fc-saldo').value);
+  var vParc = parseFloat(document.getElementById('fc-parcela').value);
+  var nParc = parseInt(document.getElementById('fc-qtd-parcelas').value)||1;
+  var venc1 = document.getElementById('fc-venc1').value;
+
+  if(!titular||!numero||!banco||!modalidade||!tipo) { showToast('Preencha todos os campos obrigatórios',true); return; }
+  if(isNaN(taxa)||taxa<=0) { showToast('Informe a taxa',true); return; }
+  if(!dataC||!dataF) { showToast('Informe as datas',true); return; }
+  if(isNaN(saldo)||saldo<=0) { showToast('Informe o saldo devedor',true); return; }
+  if(isNaN(vParc)||vParc<=0) { showToast('Informe o valor da parcela',true); return; }
+  if(!venc1) { showToast('Informe o vencimento da 1ª parcela',true); return; }
+
+  var btn = document.getElementById('btn-salvar-contrato');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  try {
+    var cat = categorizar(modalidade);
+    var obj = {
+      titular:titular, numero_contrato:numero, banco:banco,
+      modalidade:modalidade, categoria:cat, tipo:tipo,
+      taxa:taxa/100, periodicidade:document.getElementById('fc-periodicidade').value,
+      moeda:document.getElementById('fc-moeda').value,
+      saldo_devedor:saldo, data_contrato:dataC, data_fim:dataF,
+      obs:document.getElementById('fc-obs').value.trim()
+    };
+
+    var newContratoId;
+    if(editandoContratoId) {
+      await sb(TB_CONTRATOS+'?id=eq.'+editandoContratoId, {method:'PATCH', body:JSON.stringify(obj)});
+      // Atualiza local
+      var idx = contratos.findIndex(function(c){return c.id===editandoContratoId;});
+      if(idx>=0) { obj.id = editandoContratoId; contratos[idx] = obj; }
+      newContratoId = editandoContratoId;
+      showToast('✓ Contrato atualizado!');
+    } else {
+      var saved = await sb(TB_CONTRATOS, {method:'POST', body:JSON.stringify(obj)});
+      if(!saved || !saved[0] || !saved[0].id) throw new Error('o banco não retornou o ID do contrato');
+      newContratoId = saved[0].id; obj.id = newContratoId;
+      contratos.push(obj);
+      showToast('✓ Contrato salvo!');
+    }
+
+    // Gerar parcelas
+    if(!editandoContratoId || confirm('Regenerar parcelas deste contrato?')) {
+      // Remove parcelas anteriores (no banco e localmente)
+      if(editandoContratoId) await sb(TB_LANCAMENTOS+'?contrato_id=eq.'+newContratoId, {method:'DELETE', prefer:'return=minimal'});
+      lancamentos = lancamentos.filter(function(l){return l.contrato_id !== newContratoId;});
+      // Cria novas
+      var novasParc = [];
+      for(var i=0;i<nParc;i++) {
+        var dt = new Date(venc1+'T12:00:00');
+        dt.setMonth(dt.getMonth()+i);
+        var dpStr = dt.toISOString().slice(0,10);
+        var ano = 'ANO ' + dt.getFullYear();
+        var parcObj = {
+          contrato_id: newContratoId,
+          numero_contrato: numero,
+          titular: titular, banco: banco,
+          modalidade: modalidade, categoria: cat, tipo: tipo, taxa: taxa/100,
+          ano: ano, mes_parcela: dt.getMonth()+1,
+          data_parcela: dpStr, valor_parcela: vParc, saldo_devedor: saldo,
+          status: 'A PAGAR', data_pagamento: null
+        };
+        var savedP = await sb(TB_LANCAMENTOS, {method:'POST', body:JSON.stringify(parcObj)});
+        novasParc.push(savedP && savedP[0] ? savedP[0] : parcObj);
+      }
+      lancamentos = lancamentos.concat(novasParc);
+    }
+
+    var fb = document.getElementById('form-feedback');
+    fb.textContent = '✓ Salvo!'; fb.style.opacity = '1';
+    setTimeout(function(){ fb.style.opacity = '0'; }, 2500);
+
+    editandoContratoId = null;
+    clearFormContrato();
+    renderContratos();
+    renderLancamentos();
+    renderDashboard();
+    setTimeout(function(){ showView('contratos'); }, 800);
+
+  } catch(e) {
+    showToast('⚠ Erro: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '＋ Salvar Contrato';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// BAIXA DE PARCELAS
+// ══════════════════════════════════════════════════════
+function abrirBaixaEmMassa() {
+  if(!isGestor()) { showBlockedMsg(); return; }
+  var sels = [...document.querySelectorAll('.chk-l:checked, .chk-c:checked')];
+  var ids = [];
+  // Se estamos na view lancamentos, pega pelos chk-l
+  var lSels = [...document.querySelectorAll('.chk-l:checked')];
+  if(lSels.length > 0) {
+    ids = lSels.map(function(c){return +c.dataset.id;}).filter(function(id){
+      var l = lancamentos.find(function(x){return x.id===id;});
+      return l && l.status==='A PAGAR';
+    });
+  }
+  // Se estamos na view contratos (parcelas de um contrato selecionado)
+  if(ids.length === 0) {
+    var cSels = [...document.querySelectorAll('.chk-c:checked')];
+    cSels.forEach(function(chk) {
+      var cid = +chk.dataset.id;
+      lancamentos.filter(function(l){return l.contrato_id===cid&&l.status==='A PAGAR';}).forEach(function(l){ids.push(l.id);});
+    });
+  }
+  if(ids.length === 0) { showToast('⚠ Nenhum lançamento A PAGAR selecionado', 'warn'); return; }
+  baixaIds = ids;
+  document.getElementById('baixa-msg').textContent = ids.length + ' parcela(s) A PAGAR selecionada(s) para dar baixa.';
+  document.getElementById('baixa-data').value = new Date().toISOString().slice(0,10);
+  document.getElementById('modalBaixa').classList.add('open');
+}
+
+function abrirBaixaInd(id) {
+  if(!isGestor()) { showBlockedMsg(); return; }
+  var l = lancamentos.find(function(x){return x.id===id;});
+  if(!l) return;
+  baixaIndId = id;
+  document.getElementById('baixa-ind-detalhe').innerHTML =
+    di('Titular', l.titular) + di('Banco', l.banco) +
+    di('Contrato', l.numero_contrato) + di('Vencimento', fmtData(l.data_parcela)) +
+    di('Valor', fmtMoeda(l.valor_parcela)) + di('Modalidade', l.modalidade);
+  document.getElementById('baixa-ind-data').value = new Date().toISOString().slice(0,10);
+  document.getElementById('baixa-ind-valor').value = l.valor_parcela ? (+l.valor_parcela).toFixed(2) : '';
+  document.getElementById('baixa-ind-valor-prev').textContent = fmtMoeda(l.valor_parcela);
+      document.getElementById('baixa-ind-juros').value = '';
+      document.getElementById('baixa-ind-amort').textContent = '—';
+      // Listener tempo real: calcular amortização = valor pago - juros
+      function calcAmort() {
+        var vp = parseFloat(document.getElementById('baixa-ind-valor').value) || 0;
+        var jj = parseFloat(document.getElementById('baixa-ind-juros').value) || 0;
+        var amort = vp - jj;
+        document.getElementById('baixa-ind-amort').textContent = amort >= 0 ? fmtMoeda(amort) : '—';
+      }
+      document.getElementById('baixa-ind-valor').removeEventListener('input', calcAmort);
+      document.getElementById('baixa-ind-juros').removeEventListener('input', calcAmort);
+      document.getElementById('baixa-ind-valor').addEventListener('input', calcAmort);
+      document.getElementById('baixa-ind-juros').addEventListener('input', calcAmort);
+  document.getElementById('modalBaixaInd').classList.add('open');
+}
+
+async function desfazerBaixa(id) {
+  if(!confirm('Desfazer a baixa desta parcela? O status voltará para A PAGAR.')) return;
+  try {
+    var patch = {status: 'A PAGAR', data_pagamento: null, juros_pagos: null};
+    await sb(TB_LANCAMENTOS+'?id=eq.'+id, {method:'PATCH', body:JSON.stringify(patch)});
+    var l = lancamentos.find(function(x){return x.id===id;});
+    if(l) { l.status='A PAGAR'; l.data_pagamento=null; l.juros_pagos=null; }
+    renderLancamentos();
+    renderContratos();
+    renderDashboard();
+    showToast('✓ Baixa desfeita — parcela volta para A PAGAR');
+  } catch(e) {
+    showToast('⚠ Erro ao desfazer: ' + e.message, 'err');
+  }
+}
+
+async function confirmarBaixa() {
+  var dataPag = document.getElementById('baixa-data').value;
+  if(!dataPag) { showToast('⚠ Informe a data', 'warn'); return; }
+  var valorPagoStr = document.getElementById('baixa-valor').value;
+  var valorPago = valorPagoStr ? parseFloat(valorPagoStr) : null;
+  if(valorPagoStr && (isNaN(valorPago) || valorPago < 0)) { showToast('⚠ Valor inválido', 'warn'); return; }
+  var jurosStr = document.getElementById('baixa-juros').value;
+  var juros = jurosStr ? parseFloat(jurosStr) : null;
+  var btn = document.getElementById('btn-confirmar-baixa');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try {
+    for(var i=0;i<baixaIds.length;i++) {
+      var id = baixaIds[i];
+      var contaMassa=(document.getElementById('baixa-conta')?.value||'');
+      var patch={conta:contaMassa||undefined,status:'PAGO', data_pagamento:dataPag};
+      if(valorPago !== null) patch.valor_parcela = valorPago;
+      if(juros !== null) patch.juros_pagos = juros;
+      await sb(TB_LANCAMENTOS+'?id=eq.'+id, {method:'PATCH', body:JSON.stringify(patch)});
+      var l = lancamentos.find(function(x){return x.id===id;});
+      if(l) { l.status='PAGO'; l.data_pagamento=dataPag; if(valorPago!==null) l.valor_parcela=valorPago; }
+      btn.textContent = 'Salvando '+(i+1)+'/'+baixaIds.length+'…';
+    }
+    fecharModal('modalBaixa');
+    renderLancamentos();
+    renderContratos();
+    renderDashboard();
+    showToast('✓ '+baixaIds.length+' parcela(s) baixada(s)!');
+  } catch(e) {
+    showToast('⚠ Erro: '+e.message,'err');
+  } finally {
+    btn.disabled=false; btn.textContent='✓ Confirmar Baixa';
+  }
+}
+
+async function confirmarBaixaInd() {
+  var dataPag = document.getElementById('baixa-ind-data').value;
+  if(!dataPag) { showToast('⚠ Informe a data', 'warn'); return; }
+  var valorPagoStr = document.getElementById('baixa-ind-valor').value;
+  var valorPago = valorPagoStr ? parseFloat(valorPagoStr) : null;
+  if(valorPagoStr && (isNaN(valorPago) || valorPago < 0)) { showToast('⚠ Valor inválido', 'warn'); return; }
+  var jurosStr = document.getElementById('baixa-ind-juros').value;
+  var juros = jurosStr ? parseFloat(jurosStr) : null;
+  if(jurosStr && (isNaN(juros) || juros < 0)) { showToast('⚠ Juros inválido', 'warn'); return; }
+  var btn = document.getElementById('btn-confirmar-baixa-ind');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try {
+    var contaInd = document.getElementById('baixa-ind-conta')?.value||'';
+    var patch = {status:'PAGO', data_pagamento:dataPag};
+    if(contaInd) patch.conta = contaInd;
+    if(valorPago !== null) patch.valor_parcela = valorPago;
+    if(juros !== null) patch.juros_pagos = juros;
+    await sb(TB_LANCAMENTOS+'?id=eq.'+baixaIndId, {method:'PATCH', body:JSON.stringify(patch)});
+    var l = lancamentos.find(function(x){return x.id===baixaIndId;});
+    if(l) { l.status='PAGO'; l.data_pagamento=dataPag; if(valorPago!==null) l.valor_parcela=valorPago; }
+    fecharModal('modalBaixaInd');
+    // Se detalhe do contrato está aberto, atualiza
+    if(document.getElementById('modalDetalhe').classList.contains('open') && contratoAtualId) {
+      abrirDetalheContrato(contratoAtualId);
+    }
+    renderLancamentos();
+    renderDashboard();
+    showToast('✓ Parcela baixada!');
+  } catch(e) {
+    showToast('⚠ Erro: '+e.message,'err');
+  } finally {
+    btn.disabled=false; btn.textContent='✓ Confirmar Baixa';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// EXPORT EXCEL
+// ══════════════════════════════════════════════════════
+function exportarExcel() {
+  var fonte = lancamentosFiltrados && lancamentosFiltrados.length > 0 && lancamentosFiltrados.length < lancamentos.length
+    ? lancamentosFiltrados : lancamentos;
+
+  var sufixo = fonte.length < lancamentos.length ? '_filtrado' : '';
+  var nome = 'Endividamento_SantaRita' + sufixo + '_' + new Date().toISOString().slice(0,10) + '.xlsx';
+
+  showToast('📊 Gerando planilha…');
+
+  // ── Cores ──
+  var HDR_BG  = '2E75B6', HDR_FG  = 'FFFFFFFF';
+  var ROW_A   = 'FFDEEAF1', ROW_B   = 'FFBDD7EE';
+  var PAGO    = 'FFE2EFDA', VENCIDA = 'FFFFE0E0', TOTAL = 'FFFFF2CC';
+  var VERDE_PAGO = 'FF375623', VERM_AP = 'FFC00000';
+
+  function fill(argb) { return { patternType:'solid', fgColor:{argb:argb} }; }
+  function border() {
+    var s = {style:'thin', color:{argb:'FF9DC3E6'}};
+    return {top:s,bottom:s,left:s,right:s};
+  }
+
+  var wb = new ExcelJS.Workbook();
+  wb.creator = 'Fazenda Santa Rita';
+
+  // ══════ ABA BANCO DADOS ══════
+  var ws = wb.addWorksheet('BANCO DADOS', {views:[{state:'frozen',xSplit:0,ySplit:3}]});
+
+  // Larguras
+  var colWidths = [3,13,10,17,10,15,10,17,12,9,15,15,15,14,7,16,11,14,13];
+  colWidths.forEach(function(w,i){ ws.getColumn(i+1).width = w; });
+
+  // Linha 1 título
+  ws.mergeCells('A1:S1');
+  var tCell = ws.getCell('A1');
+  tCell.value = 'FAZENDA SANTA RITA — Dashboard de Endividamento';
+  tCell.font = {bold:true, size:13, color:{argb:'FF'+HDR_BG}, name:'Calibri'};
+  tCell.alignment = {horizontal:'center',vertical:'middle'};
+  ws.getRow(1).height = 22;
+  ws.getRow(2).height = 4;
+
+  // Cabeçalho linha 3
+  var headers = [null,'TITULAR','MOEDA','Modalidade','BANCO','TIPO','ANO','N° de contrato',
+    'Periodicidade','TAXA a.a.','VALOR PARCELA','SALDO DEVEDOR','DATA CONTRATAÇÃO',
+    'DATA DA PARCELA','MÊS','DATA FIM CONTRATO','STATUS','DATA PAGAMENTO','JUROS PAGOS'];
+
+  var hdrRow = ws.getRow(3);
+  hdrRow.height = 25;
+  headers.forEach(function(h,i){
+    if(!h) return;
+    var cell = hdrRow.getCell(i+1);
+    cell.value = h;
+    cell.font = {bold:true, size:10, color:{argb:'FFFFFFFF'}, name:'Calibri'};
+    cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF'+HDR_BG}};
+    cell.border = border();
+    cell.alignment = {horizontal:'center', vertical:'middle', wrapText:true};
+  });
+
+  // Dados
+  var hoje = new Date().toISOString().slice(0,10);
+  var prevContrato = null, toggle = 0;
+
+  fonte.forEach(function(l) {
+    if(l.numero_contrato !== prevContrato) { toggle = 1-toggle; prevContrato = l.numero_contrato; }
+    var bg = toggle===0 ? ROW_A : ROW_B;
+    if(l.status==='PAGO') bg = PAGO;
+    else if(l.status==='A PAGAR' && l.data_parcela < hoje) bg = VENCIDA;
+
+    var dp  = l.data_parcela   ? new Date(l.data_parcela)   : null;
+    var dc  = l.data_contrato  ? new Date(l.data_contrato)  : null;
+    var df  = l.data_fim       ? new Date(l.data_fim)       : null;
+    var dpg = l.data_pagamento ? new Date(l.data_pagamento) : null;
+
+    var row = ws.addRow([
+      null, l.titular, l.moeda||'REAIS', l.modalidade, l.banco, l.tipo, l.ano,
+      l.numero_contrato, l.periodicidade||'Anual', (l.taxa||0),
+      (l.valor_parcela||0), (l.saldo_devedor||0),
+      dc, dp, l.mes_parcela, df, l.status||'A PAGAR', dpg, l.juros_pagos||null
+    ]);
+    row.height = 15;
+
+    row.eachCell({includeEmpty:false}, function(cell, cn) {
+      if(cn===1) return;
+      cell.fill   = {type:'pattern',pattern:'solid',fgColor:{argb:bg}};
+      cell.border = border();
+      cell.alignment = {vertical:'middle'};
+      if(cn===10){ cell.numFmt='0.00%'; cell.alignment={horizontal:'center',vertical:'middle'}; }
+      else if(cn===11||cn===12||cn===19){ cell.numFmt='_-* #,##0.00_-;\\-* #,##0.00_-;_-* "-"??_-;_-@_-'; }
+      else if(cn===13||cn===14||cn===16||cn===18){ cell.numFmt='DD/MM/YYYY'; }
+      else if(cn===15){ cell.numFmt='0'; cell.alignment={horizontal:'center',vertical:'middle'}; }
+      else if(cn===17){
+        cell.alignment={horizontal:'center',vertical:'middle'};
+        cell.font = l.status==='PAGO'
+          ? {bold:true,size:10,name:'Calibri',color:{argb:VERDE_PAGO}}
+          : {bold:true,size:10,name:'Calibri',color:{argb:VERM_AP}};
+      }
+    });
+  });
+
+  // Linha de totais
+  var lastR = ws.lastRow.number;
+  var totRow = ws.addRow([
+    'TOTAL',null,null,null,null,null,null,null,null,null,
+    {formula:'SUM(K4:K'+lastR+')'},
+    {formula:'SUM(L4:L'+lastR+')'}
+  ]);
+  totRow.height = 16;
+  [1,11,12].forEach(function(cn){
+    var cell = totRow.getCell(cn);
+    cell.font  = {bold:true,size:10,name:'Calibri'};
+    cell.fill  = {type:'pattern',pattern:'solid',fgColor:{argb:TOTAL}};
+    cell.border = border();
+    if(cn===11||cn===12) cell.numFmt='_-* #,##0.00_-;\\-* #,##0.00_-;_-* "-"??_-;_-@_-';
+  });
+
+  // ══════ ABA RESUMO ══════
+  var ws2 = wb.addWorksheet('RESUMO',{views:[{state:'frozen',ySplit:3}]});
+  var rCols = ['TITULAR','CONTRATOS','PARCELAS','A PAGAR','PAGAS','TOTAL PARCELAS (R$)','SALDO DEVEDOR (R$)'];
+  var rWidths = [15,12,12,10,10,22,22];
+  rWidths.forEach(function(w,i){ ws2.getColumn(i+1).width=w; });
+
+  ws2.mergeCells('A1:G1');
+  var t2 = ws2.getCell('A1');
+  t2.value='RESUMO POR TITULAR';
+  t2.font={bold:true,size:13,color:{argb:'FF'+HDR_BG},name:'Calibri'};
+  t2.alignment={horizontal:'center',vertical:'middle'};
+  ws2.getRow(1).height=20;
+  ws2.getRow(2).height=4;
+
+  var hdrRow2 = ws2.getRow(3); hdrRow2.height=24;
+  rCols.forEach(function(h,i){
+    var cell=hdrRow2.getCell(i+1);
+    cell.value=h;
+    cell.font={bold:true,size:10,color:{argb:'FFFFFFFF'},name:'Calibri'};
+    cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF'+HDR_BG}};
+    cell.border=border();
+    cell.alignment={horizontal:'center',vertical:'middle'};
+  });
+
+  var titMap={};
+  fonte.forEach(function(l){
+    var t=l.titular||'';
+    if(!titMap[t]) titMap[t]={contratos:new Set(),parc:0,ap:0,pago:0,val:0,saldo:0};
+    var d=titMap[t];
+    d.contratos.add(l.numero_contrato); d.parc++;
+    d.val+=(l.valor_parcela||0);
+    if(l.status==='PAGO') d.pago++;
+    else { d.ap++; d.saldo+=(l.saldo_devedor||0); }
+  });
+
+  Object.keys(titMap).sort().forEach(function(t,ti){
+    var d=titMap[t], bg=ti%2===0?ROW_A:ROW_B;
+    var rr=ws2.addRow([t,d.contratos.size,d.parc,d.ap,d.pago,d.val,d.saldo]);
+    rr.height=15;
+    rr.eachCell({includeEmpty:false},function(cell,cn){
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:bg}};
+      cell.border=border();
+      if(cn<=2) cell.alignment={vertical:'middle'};
+      else cell.alignment={horizontal:'center',vertical:'middle'};
+      if(cn===6||cn===7) cell.numFmt='_-* #,##0.00_-;\\-* #,##0.00_-;_-* "-"??_-;_-@_-';
+    });
+  });
+
+  // Download
+  wb.xlsx.writeBuffer().then(function(buf){
+    var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download=nome; a.click();
+    URL.revokeObjectURL(url);
+    showToast('✓ Planilha gerada com sucesso!');
+  }).catch(function(e){
+    showToast('⚠ Erro: '+e.message,'err');
+  });
+}
+
+
+
+function showView(v) {
+  document.querySelectorAll('.view').forEach(function(el){el.classList.remove('active');});
+  document.querySelectorAll('.nav-tab').forEach(function(el){el.classList.remove('active');});
+  var el = document.getElementById('view-'+v);
+  if(el) el.classList.add('active');
+  var map = {dashboard:0,contratos:1,novo:2,lancamentos:3};
+  var tabs = document.querySelectorAll('.nav-tab');
+  if(map[v] !== undefined && tabs[map[v]]) tabs[map[v]].classList.add('active');
+}
+
+function goContratos() { showView('contratos'); renderContratos(); }
+function goLancamentos() {
+  if(!isGestor()) { showBlockedMsg(); return; }
+  showView('lancamentos');
+  renderLancamentos();
+}
+
+function showBlockedMsg() {
+  document.getElementById('blockedOverlay').classList.remove('hidden');
+  setTimeout(function(){ document.getElementById('blockedOverlay').classList.add('hidden'); }, 4000);
+}
+
+function fecharModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════════
+// UTILIDADES
+// ══════════════════════════════════════════════════════
+function setSyncState(state, text) {
+  document.getElementById('syncDot').className = 'sync-dot ' + state;
+  document.getElementById('syncText').textContent = text;
+}
+function setLoading(show, text) {
+  document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+  if(text) document.getElementById('loadingText').textContent = text;
+}
+function showToast(msg, tipo) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (tipo?' '+tipo:'');
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3500);
+}
+function fmtMoeda(v) {
+  if(v === null || v === undefined || isNaN(+v)) return '—';
+  return 'R$ '+(+v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtMoedaK(v) {
+  v = +v || 0;
+  if(v >= 1e6) return 'R$ '+(v/1e6).toFixed(1)+'M';
+  if(v >= 1e3) return 'R$ '+(v/1e3).toFixed(0)+'K';
+  return 'R$ '+v.toFixed(0);
+}
+function fmtData(d) {
+  if(!d) return '—';
+  var p = d.split('T')[0].split('-');
+  return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : d;
+}
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function di(label, value) {
+  return '<div class="di"><div class="dl">'+label+'</div><div class="dv">'+value+'</div></div>';
+}
+function abrevTipo(t) {
+  return t === 'CURTO PRAZO' ? 'CP' : 'LP';
+}
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+initUI();
+loadAll();
+
+// ══════════════════════════════════════════
+// EDITAR LANÇAMENTO
+// ══════════════════════════════════════════
+var _editLancId = null;
+
+function abrirEditarLanc(id) {
+  var l = lancamentos.find(function(x){ return x.id === id; });
+  if(!l) return;
+  _editLancId = id;
+  document.getElementById('edit-lanc-sub').textContent =
+    'Contrato ' + l.numero_contrato + ' · ' + l.banco + ' · ' + l.ano + ' · Parcela ' + l.mes_parcela;
+  document.getElementById('edit-lanc-titular').value   = l.titular || '';
+  document.getElementById('edit-lanc-banco').value     = l.banco || '';
+  document.getElementById('edit-lanc-modalidade').value= l.modalidade || '';
+  document.getElementById('edit-lanc-data').value      = l.data_parcela || '';
+  document.getElementById('edit-lanc-mes').value       = l.mes_parcela || '';
+  document.getElementById('edit-lanc-valor').value     = l.valor_parcela ? (+l.valor_parcela).toFixed(2) : '';
+  document.getElementById('edit-lanc-saldo').value     = l.saldo_devedor ? (+l.saldo_devedor).toFixed(2) : '';
+  document.getElementById('modalEditarLanc').classList.add('open');
+}
+
+async function confirmarEditarLanc() {
+  if(!_editLancId) return;
+  var btn = document.getElementById('btn-confirmar-edit-lanc');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try {
+    var upd = {
+      titular:       document.getElementById('edit-lanc-titular').value,
+      banco:         document.getElementById('edit-lanc-banco').value.trim(),
+      modalidade:    document.getElementById('edit-lanc-modalidade').value.trim(),
+      data_parcela:  document.getElementById('edit-lanc-data').value,
+      mes_parcela:   parseInt(document.getElementById('edit-lanc-mes').value) || null,
+      valor_parcela: parseFloat(document.getElementById('edit-lanc-valor').value) || null,
+      saldo_devedor: parseFloat(document.getElementById('edit-lanc-saldo').value) || null
+    };
+    // Salvar no Supabase
+    var r = await fetch(SB_URL + '/rest/v1/' + TB_LANCAMENTOS + '?id=eq.' + _editLancId, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(upd)
+    });
+    if(!r.ok) throw new Error('Erro ' + r.status);
+    // Atualizar cache local
+    var idx = lancamentos.findIndex(function(x){ return x.id === _editLancId; });
+    if(idx >= 0) Object.assign(lancamentos[idx], upd);
+    fecharModal('modalEditarLanc');
+    renderLancamentos();
+    renderDashboard();
+    showToast('✓ Lançamento atualizado!');
+  } catch(e) {
+    showToast('⚠ Erro: ' + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Salvar';
+    _editLancId = null;
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// ADITIVO — Reparcelamento e Deslocamento (juros simples)
+// ═══════════════════════════════════════════════════════════
+var _aditLancId = null;
+
+// Chamada a partir do modal de Baixa: fecha a baixa e abre o aditivo
+function aditivoAPartirDaBaixa() {
+  if(!isGestor()) { showBlockedMsg(); return; }
+  var id = baixaIndId;
+  fecharModal('modalBaixaInd');
+  abrirAditivo(id);
+}
+
+function abrirAditivo(id) {
+  if(!isGestor()) { showBlockedMsg(); return; }
+  var l = lancamentos.find(function(x){return x.id===id;});
+  if(!l) { showToast('⚠ Parcela não encontrada','warn'); return; }
+  _aditLancId = id;
+  document.getElementById('adit-sub').textContent =
+    l.titular + ' · ' + l.banco + ' · ' + l.numero_contrato + ' · ' + l.modalidade;
+  // Pré-preenche
+  document.getElementById('adit-saldo').value = (+l.saldo_devedor||0).toFixed(2);
+  document.getElementById('adit-taxa').value = ((+l.taxa||0)*100).toFixed(4).replace(/0+$/,'').replace(/\.$/,'');
+  document.getElementById('adit-nparc').value = 3;
+  document.getElementById('adit-period').value = 'anual';
+  // Data 1ª parcela: 1 ano após a parcela original por padrão
+  var base = l.data_parcela ? new Date(l.data_parcela+'T00:00:00') : new Date();
+  var prox = new Date(base.getTime()); prox.setFullYear(prox.getFullYear()+1);
+  document.getElementById('adit-data1').value = prox.toISOString().slice(0,10);
+  // Deslocamento: sugere 2 anos à frente
+  var desl = new Date(base.getTime()); desl.setFullYear(desl.getFullYear()+2);
+  document.getElementById('adit-data-desloc').value = desl.toISOString().slice(0,10);
+  // Baixa
+  document.getElementById('adit-baixa-data').value = new Date().toISOString().slice(0,10);
+  document.getElementById('adit-baixa-valor').value = 0;
+  // Contrato: reset para "mesmo"
+  var radios = document.getElementsByName('adit-contrato');
+  for(var i=0;i<radios.length;i++){ radios[i].checked = (radios[i].value==='mesmo'); }
+  document.getElementById('adit-novo-numero').style.display='none';
+  document.getElementById('adit-novo-numero').value='';
+
+  aditSetTipo('reparc');
+  document.getElementById('modalAditivo').classList.add('open');
+}
+
+function aditSetTipo(tipo) {
+  document.getElementById('adit-tipo').value = tipo;
+  var tR = document.getElementById('adit-tab-reparc');
+  var tD = document.getElementById('adit-tab-desloc');
+  var boxN = document.getElementById('adit-box-nparc');
+  var boxD = document.getElementById('adit-box-data1');
+  var desc = document.getElementById('adit-desc');
+  if(tipo==='reparc') {
+    tR.className='btn btn-primary'; tR.style.flex='1'; tR.style.fontSize='12px';
+    tD.className='btn btn-secondary'; tD.style.flex='1'; tD.style.fontSize='12px';
+    boxN.style.display=''; boxD.style.display='none';
+    desc.innerHTML = '<strong>Reparcelamento:</strong> o saldo é dividido em N parcelas iguais. '
+      + 'Juros simples: <em>juros total = saldo × taxa × nº parcelas</em>, somado ao saldo e dividido igualmente. '
+      + 'A parcela original vira ADITADO (com baixa obrigatória).';
+  } else {
+    tD.className='btn btn-primary'; tD.style.flex='1'; tD.style.fontSize='12px';
+    tR.className='btn btn-secondary'; tR.style.flex='1'; tR.style.fontSize='12px';
+    boxN.style.display='none'; boxD.style.display='';
+    desc.innerHTML = '<strong>Deslocamento:</strong> cria UMA nova parcela na data futura escolhida, '
+      + 'com juros simples pelo período deslocado (<em>saldo × taxa × anos</em>). '
+      + 'A parcela original vira ADITADO (com baixa obrigatória).';
+  }
+  aditPreview();
+}
+
+function aditToggleContrato() {
+  var val = document.querySelector('input[name="adit-contrato"]:checked').value;
+  document.getElementById('adit-novo-numero').style.display = (val==='novo') ? '' : 'none';
+}
+
+// fração de ano entre duas datas
+function _anosEntre(d1, d2) {
+  var ms = d2.getTime() - d1.getTime();
+  return ms / (365.25*24*3600*1000);
+}
+
+function aditPreview() {
+  var tipo = document.getElementById('adit-tipo').value;
+  var saldo = parseFloat(document.getElementById('adit-saldo').value)||0;
+  var taxaPct = parseFloat(document.getElementById('adit-taxa').value)||0;
+  var taxa = taxaPct/100;
+  var body = document.getElementById('adit-preview-body');
+  var parcelas = [];
+
+  if(tipo==='reparc') {
+    var n = Math.max(1, Math.min(7, parseInt(document.getElementById('adit-nparc').value)||1));
+    var period = document.getElementById('adit-period').value;
+    // Juros simples: total = saldo × taxa × n  (conforme regra definida)
+    var jurosTotal = saldo * taxa * n;
+    var total = saldo + jurosTotal;
+    var valorParc = total / n;
+    var d1str = document.getElementById('adit-data1').value;
+    var base = d1str ? new Date(d1str+'T00:00:00') : new Date();
+    for(var i=0;i<n;i++) {
+      var d = new Date(base.getTime());
+      if(period==='anual') d.setFullYear(d.getFullYear()+i);
+      else if(period==='semestral') d.setMonth(d.getMonth()+6*i);
+      else d.setMonth(d.getMonth()+i);
+      parcelas.push({ data: d.toISOString().slice(0,10), valor: valorParc });
+    }
+  } else {
+    // Deslocamento: 1 parcela na nova data, juros simples pelo período
+    var ddstr = document.getElementById('adit-data-desloc').value;
+    var l = lancamentos.find(function(x){return x.id===_aditLancId;});
+    var origStr = (l && l.data_parcela) ? l.data_parcela : new Date().toISOString().slice(0,10);
+    var dOrig = new Date(origStr+'T00:00:00');
+    var dNova = ddstr ? new Date(ddstr+'T00:00:00') : dOrig;
+    var anos = Math.max(0, _anosEntre(dOrig, dNova));
+    var jurosTotal = saldo * taxa * anos;
+    var valor = saldo + jurosTotal;
+    parcelas.push({ data: dNova.toISOString().slice(0,10), valor: valor });
+  }
+
+  // Render editável
+  body.innerHTML = parcelas.map(function(p, idx) {
+    return '<tr>'
+      + '<td style="padding:6px 8px;color:var(--cinza);font-family:\'DM Mono\',monospace;">'+(idx+1)+'</td>'
+      + '<td style="padding:6px 8px;"><input type="date" value="'+p.data+'" id="adit-pd-'+idx+'" style="font-size:12px;padding:4px 6px;border:1px solid var(--cinza-light);border-radius:6px;" onchange="aditRecalcTotal()"></td>'
+      + '<td style="padding:6px 8px;text-align:right;"><input type="number" step="0.01" min="0" value="'+p.valor.toFixed(2)+'" id="adit-pv-'+idx+'" style="font-size:12px;padding:4px 6px;width:150px;text-align:right;border:1px solid var(--cinza-light);border-radius:6px;font-family:\'DM Mono\',monospace;" onchange="aditRecalcTotal()"></td>'
+      + '</tr>';
+  }).join('');
+  body.setAttribute('data-count', parcelas.length);
+  aditRecalcTotal();
+}
+
+function aditRecalcTotal() {
+  var body = document.getElementById('adit-preview-body');
+  var n = parseInt(body.getAttribute('data-count'))||0;
+  var soma = 0;
+  for(var i=0;i<n;i++) {
+    var v = parseFloat(document.getElementById('adit-pv-'+i).value)||0;
+    soma += v;
+  }
+  document.getElementById('adit-total').textContent = '∑ ' + fmtMoeda(soma) + ' em ' + n + 'x';
+}
+
+async function confirmarAditivo() {
+  if(!isGestor()) { showBlockedMsg(); return; }
+  var l = lancamentos.find(function(x){return x.id===_aditLancId;});
+  if(!l) { showToast('⚠ Parcela não encontrada','warn'); return; }
+
+  // Coleta prévia editada
+  var body = document.getElementById('adit-preview-body');
+  var n = parseInt(body.getAttribute('data-count'))||0;
+  if(n<1) { showToast('⚠ Nenhuma parcela na prévia','warn'); return; }
+  var novasParcelas = [];
+  for(var i=0;i<n;i++) {
+    var dt = document.getElementById('adit-pd-'+i).value;
+    var vl = parseFloat(document.getElementById('adit-pv-'+i).value)||0;
+    if(!dt) { showToast('⚠ Data da parcela '+(i+1)+' em branco','warn'); return; }
+    if(vl<=0) { showToast('⚠ Valor da parcela '+(i+1)+' inválido','warn'); return; }
+    novasParcelas.push({ data: dt, valor: vl });
+  }
+
+  // Baixa obrigatória
+  var baixaData = document.getElementById('adit-baixa-data').value;
+  if(!baixaData) { showToast('⚠ Informe a data da baixa da parcela original','warn'); return; }
+  var baixaValorStr = document.getElementById('adit-baixa-valor').value;
+  var baixaValor = baixaValorStr!=='' ? parseFloat(baixaValorStr) : 0;
+  if(isNaN(baixaValor) || baixaValor<0) { showToast('⚠ Valor da baixa inválido','warn'); return; }
+
+  // Contrato destino
+  var contratoOpt = document.querySelector('input[name="adit-contrato"]:checked').value;
+  var numeroDestino = l.numero_contrato;
+  if(contratoOpt==='novo') {
+    var nn = document.getElementById('adit-novo-numero').value.trim();
+    if(!nn) { showToast('⚠ Informe o número do novo contrato','warn'); return; }
+    numeroDestino = nn;
+  }
+
+  var tipo = document.getElementById('adit-tipo').value;
+  var saldoBase = parseFloat(document.getElementById('adit-saldo').value)||0;
+
+  var btn = document.getElementById('btn-confirmar-aditivo');
+  btn.disabled=true; btn.textContent='Processando…';
+
+  try {
+    // 1) Baixa + ADITADO na parcela original
+    var patchOrig = {
+      status: 'ADITADO',
+      data_pagamento: baixaData,
+      valor_parcela: baixaValor
+    };
+    await sb(TB_LANCAMENTOS+'?id=eq.'+l.id, {method:'PATCH', body:JSON.stringify(patchOrig)});
+    // atualiza cache local
+    l.status='ADITADO'; l.data_pagamento=baixaData; l.valor_parcela=baixaValor;
+
+    // 2) Cria novas parcelas
+    var taxaDec = (parseFloat(document.getElementById('adit-taxa').value)||0)/100;
+    for(var j=0;j<novasParcelas.length;j++) {
+      var p = novasParcelas[j];
+      var anoNum = p.data.slice(0,4);
+      var mesNum = parseInt(p.data.slice(5,7));
+      var parcObj = {
+        contrato_id: l.contrato_id,
+        numero_contrato: numeroDestino,
+        titular: l.titular,
+        banco: l.banco,
+        modalidade: 'Aditivo',
+        categoria: 'Aditivo',
+        tipo: l.tipo,
+        taxa: taxaDec,
+        ano: 'ANO ' + anoNum,
+        mes_parcela: mesNum,
+        data_parcela: p.data,
+        valor_parcela: p.valor,
+        saldo_devedor: saldoBase,
+        status: 'A PAGAR',
+        data_pagamento: null
+      };
+      var saved = await sb(TB_LANCAMENTOS, {method:'POST', body:JSON.stringify(parcObj)});
+      // adiciona ao cache local
+      if(saved && saved[0]) lancamentos.push(saved[0]);
+      else { parcObj.id = Math.max.apply(null, lancamentos.map(function(x){return x.id||0;}))+1; lancamentos.push(parcObj); }
+    }
+
+    fecharModal('modalAditivo');
+    // Se o detalhe do contrato estiver aberto, atualiza
+    if(document.getElementById('modalDetalhe').classList.contains('open') && contratoAtualId) {
+      abrirDetalheContrato(contratoAtualId);
+    }
+    renderLancamentos();
+    renderContratos();
+    renderDashboard();
+    var rotulo = (tipo==='reparc') ? 'Reparcelamento' : 'Deslocamento';
+    showToast('✓ '+rotulo+' concluído: '+novasParcelas.length+' nova(s) parcela(s)!');
+  } catch(e) {
+    showToast('⚠ Erro no aditivo: '+e.message,'err');
+  } finally {
+    btn.disabled=false; btn.textContent='⇄ Confirmar Aditivo';
+  }
+}
+
+</script>
+
+<!-- ════ MODAL: EDITAR LANÇAMENTO ════ -->
+<div class="modal-overlay modal-sm" id="modalEditarLanc">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">✎ Editar Lançamento</div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--cinza);margin-top:2px;" id="edit-lanc-sub"></div>
+      </div>
+      <button class="modal-close" onclick="fecharModal('modalEditarLanc')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field" style="grid-column:span 2;">
+          <label>Modalidade</label>
+          <input type="text" id="edit-lanc-modalidade" placeholder="Ex: BB INVESTE AGRO">
+        </div>
+        <div class="field">
+          <label>Titular</label>
+          <select id="edit-lanc-titular">
+            <option value="">Selecionar…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Banco</label>
+          <input type="text" id="edit-lanc-banco" placeholder="BB, BRADESCO…">
+        </div>
+        <div class="field">
+          <label>Vencimento</label>
+          <input type="date" id="edit-lanc-data">
+        </div>
+        <div class="field">
+          <label>Mês da Parcela</label>
+          <input type="number" id="edit-lanc-mes" min="1" max="12" placeholder="1–12">
+        </div>
+        <div class="field">
+          <label>Valor da Parcela (R$)</label>
+          <input type="number" id="edit-lanc-valor" step="0.01" min="0" placeholder="0,00">
+        </div>
+        <div class="field">
+          <label>Saldo Devedor (R$)</label>
+          <input type="number" id="edit-lanc-saldo" step="0.01" min="0" placeholder="0,00">
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:10px 14px;background:var(--creme);border-radius:8px;font-size:11px;color:var(--cinza);font-family:'DM Mono',monospace;">
+        Apenas os campos do lançamento serão alterados. O contrato não será modificado.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modalEditarLanc')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirmar-edit-lanc" onclick="confirmarEditarLanc()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL ADITIVO (Reparcelamento / Deslocamento) ═══════════ -->
+<div class="modal-overlay" id="modalAditivo">
+  <div class="modal" style="max-width:720px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">⇄ Aditivo de Contrato</div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--cinza);margin-top:2px;" id="adit-sub"></div>
+      </div>
+      <button class="modal-close" onclick="fecharModal('modalAditivo')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Escolha do tipo de aditivo -->
+      <div style="display:flex;gap:10px;margin-bottom:18px;">
+        <button id="adit-tab-reparc" class="btn btn-primary" style="flex:1;font-size:12px;" onclick="aditSetTipo('reparc')">↻ Reparcelamento</button>
+        <button id="adit-tab-desloc" class="btn btn-secondary" style="flex:1;font-size:12px;" onclick="aditSetTipo('desloc')">→ Deslocamento</button>
+      </div>
+      <input type="hidden" id="adit-tipo" value="reparc">
+
+      <div id="adit-desc" style="padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:11px;color:#1e40af;margin-bottom:18px;line-height:1.5;"></div>
+
+      <!-- Parâmetros -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+        <div class="field">
+          <label>Saldo a reparcelar (R$)</label>
+          <input type="number" id="adit-saldo" step="0.01" min="0" oninput="aditPreview()">
+        </div>
+        <div class="field">
+          <label>Taxa de juros (% a.a)</label>
+          <input type="number" id="adit-taxa" step="0.0001" min="0" placeholder="Ex: 10" oninput="aditPreview()">
+        </div>
+        <div class="field" id="adit-box-nparc">
+          <label>Nº de parcelas (até 7)</label>
+          <input type="number" id="adit-nparc" min="1" max="7" value="3" oninput="aditPreview()">
+        </div>
+        <div class="field" id="adit-box-data1" style="display:none;">
+          <label>Nova data (deslocamento)</label>
+          <input type="date" id="adit-data-desloc" oninput="aditPreview()">
+        </div>
+        <div class="field">
+          <label>Data 1ª parcela</label>
+          <input type="date" id="adit-data1" oninput="aditPreview()">
+        </div>
+        <div class="field">
+          <label>Periodicidade</label>
+          <select id="adit-period" onchange="aditPreview()">
+            <option value="anual">Anual</option>
+            <option value="mensal">Mensal</option>
+            <option value="semestral">Semestral</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Contrato destino -->
+      <div style="margin-top:8px;padding:12px 14px;background:var(--creme);border-radius:8px;">
+        <label style="font-size:11px;font-weight:600;color:var(--cinza);display:block;margin-bottom:8px;">Contrato das novas parcelas</label>
+        <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="radio" name="adit-contrato" value="mesmo" checked onchange="aditToggleContrato()"> Mesmo contrato
+          </label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="radio" name="adit-contrato" value="novo" onchange="aditToggleContrato()"> Novo contrato
+          </label>
+          <input type="text" id="adit-novo-numero" placeholder="Novo nº de contrato" style="display:none;flex:1;min-width:160px;font-size:12px;padding:6px 10px;border:1.5px solid var(--cinza-light);border-radius:8px;">
+        </div>
+      </div>
+
+      <!-- Prévia editável -->
+      <div style="margin-top:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;font-weight:700;color:var(--texto);letter-spacing:.04em;">PRÉVIA DAS PARCELAS <span style="font-weight:400;color:var(--cinza);">(edite os valores se necessário)</span></span>
+          <span id="adit-total" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--verde);font-weight:700;"></span>
+        </div>
+        <div style="overflow-x:auto;border:1px solid var(--cinza-light);border-radius:8px;">
+          <table style="width:100%;font-size:12px;">
+            <thead><tr style="background:var(--creme);">
+              <th style="padding:8px;text-align:left;">#</th>
+              <th style="padding:8px;text-align:left;">Vencimento</th>
+              <th style="padding:8px;text-align:right;">Valor da parcela (R$)</th>
+            </tr></thead>
+            <tbody id="adit-preview-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Baixa da parcela original -->
+      <div style="margin-top:18px;padding:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
+        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:10px;">⚠ Baixa da parcela original (obrigatória)</div>
+        <div style="font-size:11px;color:#92400e;margin-bottom:10px;line-height:1.5;">A parcela original será marcada como <strong>ADITADO</strong>, mas precisa registrar a baixa. Informe o que foi efetivamente pago (pode ser 0).</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="field" style="margin:0;">
+            <label>Data da baixa</label>
+            <input type="date" id="adit-baixa-data">
+          </div>
+          <div class="field" style="margin:0;">
+            <label>Valor pago na baixa (R$)</label>
+            <input type="number" id="adit-baixa-valor" step="0.01" min="0" value="0">
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modalAditivo')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirmar-aditivo" onclick="confirmarAditivo()" style="background:#2563eb;border-color:#2563eb;">⇄ Confirmar Aditivo</button>
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>

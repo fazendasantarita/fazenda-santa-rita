@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#008259">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Santa Rita">
+  <!-- iOS: apple-touch-icon SEM cache-buster para forçar reload -->
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-128.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <meta name="msapplication-TileImage" content="icons/icon-144.png">
+  <meta name="msapplication-TileColor" content="#ffffff">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Santa Rita — Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    background: #f5f0eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card {
+    background: white;
+    border-radius: 20px;
+    padding: 48px 44px;
+    width: 380px;
+    max-width: calc(100vw - 32px);
+    box-shadow: 0 8px 48px rgba(0,0,0,0.12);
+    text-align: center;
+  }
+  .card img { width: 170px; margin-bottom: 32px; }
+  .label {
+    display: block; text-align: left;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: #888; margin-bottom: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+  .inp {
+    width: 100%; padding: 12px 16px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px; font-size: 15px;
+    color: #1a3a2a; outline: none;
+    font-family: 'Syne', sans-serif;
+    transition: border-color .2s;
+    margin-bottom: 14px;
+  }
+  .inp:focus { border-color: #4a7c2f; box-shadow: 0 0 0 3px rgba(74,124,47,.1); }
+  .btn {
+    width: 100%; padding: 14px;
+    background: #4a7c2f; color: white;
+    border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    cursor: pointer; margin-top: 4px;
+    transition: background .2s;
+    letter-spacing: .04em;
+  }
+  .btn:hover { background: #3d6b25; }
+  .err { 
+    color: #c0392b; font-size: 12px; 
+    margin-top: 12px; min-height: 18px;
+    font-family: 'DM Mono', monospace;
+  }
+  .footer { margin-top: 32px; font-size: 10px; color: #ccc; font-family: 'DM Mono', monospace; }
+</style>
+
+</head>
+<body>
+  <div class="card">
+    <img src="icons/logo.png" alt="Fazenda Santa Rita">
+    <div>
+      <label class="label" for="u">Usuário</label>
+      <input class="inp" type="text" id="u" placeholder="seu usuario" autocomplete="username"
+        onkeydown="if(event.key==='Enter')document.getElementById('p').focus()">
+      <label class="label" for="p">Senha</label>
+      <input class="inp" type="password" id="p" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')login()">
+      <button class="btn" onclick="login()">Entrar</button>
+      <div class="err" id="err"></div>
+    </div>
+    <div class="footer">Fazenda Santa Rita &copy; 2026</div>
+  </div>
+  <script>
+    // Usuários base — senhas e roles podem ser sobrescritos pelo app-config via localStorage
+    var USERS_DEFAULT = {
+      admin:{senha:'trocar123',role:'gestor'}
+    };
+
+    function getUsers() {
+      var stored = localStorage.getItem('gf_users_v2');
+      if(stored) return JSON.parse(stored);
+      return null;
+    }
+
+    function login() {
+      var u = (document.getElementById('u').value||'').trim().toLowerCase();
+      var p = document.getElementById('p').value||'';
+      var stored = getUsers();
+      var senha, role;
+      if(stored && stored[u]) {
+        senha = stored[u].senha;
+        role  = stored[u].role || 'funcionario';
+      } else if(USERS_DEFAULT[u]) {
+        senha = USERS_DEFAULT[u].senha;
+        role  = USERS_DEFAULT[u].role;
+      } else {
+        senha = null;
+      }
+      if(senha && p === senha) {
+        var nome = u.charAt(0).toUpperCase() + u.slice(1);
+        sessionStorage.setItem('gf_user', nome);
+        sessionStorage.setItem('gf_role', role);
+        window.location.href = 'app.html';
+      } else {
+        var err = document.getElementById('err');
+        err.textContent = 'Usuário ou senha incorretos';
+        document.getElementById('p').value='';
+        document.getElementById('p').focus();
+        setTimeout(function(){err.textContent='';}, 3000);
+      }
+    }
+    // Se já logado, ir direto para o app
+    if(sessionStorage.getItem('gf_user')) window.location.href='app.html';
+    document.getElementById('u').focus();
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js')
+          .then(function(reg) { console.log('SW registrado:', reg.scope); })
+          .catch(function(err) { console.warn('SW erro:', err); });
+      });
+    }
+  </script>
+</body>
+</html>

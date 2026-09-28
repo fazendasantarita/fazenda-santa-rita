@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Santa Rita — Relatórios</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --verde:#1a3a2a;--verde-mid:#2d5c3f;--verde-light:#4a8c5c;
+  --ouro:#c8a84b;--ouro-light:#e8c96a;
+  --creme:#f5f0e8;--creme-dark:#e8e0d0;--branco:#fafaf7;
+  --cinza:#8a8a7a;--cinza-light:#d4d0c8;--texto:#1a1a14;
+  --erro:#c0392b;--sucesso:#27ae60;
+  --shadow:0 4px 24px rgba(26,58,42,0.12);--shadow-lg:0 12px 48px rgba(26,58,42,0.18);
+  --radius:12px;--radius-sm:6px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--creme);color:var(--texto);min-height:100vh;}
+header{background:var(--verde);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,0.25);}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--ouro);letter-spacing:0.05em;display:flex;align-items:center;gap:10px;}
+.logo span{color:var(--creme);font-weight:400;font-size:14px;opacity:0.7;}
+.nav-tabs{display:flex;gap:4px;}
+.nav-tab{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;padding:8px 20px;border-radius:6px;border:none;cursor:pointer;transition:all 0.2s;color:rgba(245,240,232,0.6);background:transparent;}
+.nav-tab:hover{color:var(--creme);background:rgba(255,255,255,0.08);}
+.nav-tab.active{background:var(--ouro);color:var(--verde);font-weight:700;}
+.user-badge{display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(245,240,232,0.7);}
+.user-select{background:rgba(255,255,255,0.1);border:1px solid rgba(200,168,75,0.3);color:var(--ouro-light);padding:6px 12px;border-radius:6px;font-family:'Syne',sans-serif;font-size:12px;font-weight:600;cursor:pointer;outline:none;}
+.user-select option{background:var(--verde);color:var(--creme);}
+.sync-indicator{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.06em;}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--cinza);transition:background 0.3s;}
+.sync-dot.online{background:var(--sucesso);box-shadow:0 0 6px rgba(39,174,96,0.5);}
+.sync-dot.syncing{background:var(--ouro);animation:pulse 1s infinite;}
+.sync-dot.error{background:var(--erro);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes spin{to{transform:rotate(360deg);}}
+.view{display:none;}.view.active{display:block !important;}
+.loading-overlay{position:fixed;inset:0;background:rgba(26,58,42,0.75);backdrop-filter:blur(6px);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.loading-overlay.hidden{display:none;}
+.spinner{width:44px;height:44px;border:3px solid rgba(200,168,75,0.3);border-top-color:var(--ouro);border-radius:50%;animation:spin 0.8s linear infinite;}
+.loading-text{font-family:'DM Mono',monospace;font-size:12px;color:var(--ouro-light);letter-spacing:0.12em;}
+.form-container{max-width:960px;margin:40px auto;padding:0 24px;}
+.form-header{margin-bottom:32px;}
+.form-header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:32px;color:var(--verde);line-height:1.1;}
+.form-header p{color:var(--cinza);margin-top:6px;font-size:14px;}
+.form-card{background:var(--branco);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.form-section{padding:28px 32px;border-bottom:1px solid var(--creme-dark);}
+.form-section:last-child{border-bottom:none;}
+.section-label{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--verde-light);margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--creme-dark);}
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.form-grid.four{grid-template-columns:repeat(4,1fr);}
+.col-span-2{grid-column:span 2;}
+.field{display:flex;flex-direction:column;gap:6px;}
+label{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--cinza);}
+label .req{color:var(--ouro);margin-left:2px;}
+input,select,textarea{font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 14px;border:1.5px solid var(--creme-dark);border-radius:var(--radius-sm);background:var(--branco);color:var(--texto);transition:border-color 0.2s,box-shadow 0.2s;outline:none;width:100%;}
+input:focus,select:focus,textarea:focus{border-color:var(--verde-light);box-shadow:0 0 0 3px rgba(74,140,92,0.12);}
+input::placeholder{color:var(--cinza-light);}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8a7a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+textarea{resize:vertical;min-height:80px;}
+.status-toggle{display:flex;gap:8px;}
+.status-btn{flex:1;padding:10px;border-radius:var(--radius-sm);border:1.5px solid var(--creme-dark);background:var(--branco);font-family:'DM Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.06em;cursor:pointer;transition:all 0.2s;color:var(--cinza);text-align:center;}
+.status-btn.apagar.active{background:#fff3cd;border-color:#f0ad4e;color:#856404;}
+.status-btn.pago.active{background:#d4edda;border-color:#28a745;color:#155724;}
+.valor-wrapper{position:relative;}
+.valor-prefix{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-family:'DM Mono',monospace;font-size:12px;color:var(--cinza);pointer-events:none;}
+.valor-wrapper input{padding-left:38px;}
+.form-actions{padding:24px 32px;background:var(--creme);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.btn{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;padding:12px 28px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-primary{background:var(--verde);color:var(--ouro);}
+.btn-primary:hover:not(:disabled){background:var(--verde-mid);transform:translateY(-1px);box-shadow:var(--shadow);}
+.btn-secondary{background:transparent;color:var(--cinza);border:1.5px solid var(--creme-dark);}
+.btn-secondary:hover{border-color:var(--cinza);color:var(--texto);}
+.btn-ouro{background:var(--ouro);color:var(--verde);}
+.btn-ouro:hover{background:var(--ouro-light);transform:translateY(-1px);}
+.btn-danger{background:transparent;color:var(--erro);border:1.5px solid rgba(192,57,43,0.2);}
+.btn-danger:hover{background:rgba(192,57,43,0.06);}
+.save-feedback{font-family:'DM Mono',monospace;font-size:12px;color:var(--sucesso);opacity:0;transition:opacity 0.3s;display:flex;align-items:center;gap:6px;}
+.save-feedback.show{opacity:1;}
+.panel-container{max-width:1280px;margin:40px auto;padding:0 24px;}
+.panel-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:28px;}
+.panel-header h1{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:var(--verde);}
+.panel-header p{color:var(--cinza);font-size:13px;margin-top:4px;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.stat-card{background:var(--branco);border-radius:var(--radius);padding:20px 24px;box-shadow:var(--shadow);border-left:4px solid var(--verde-light);}
+.stat-card.ouro{border-left-color:var(--ouro);}
+.stat-card.warn{border-left-color:#f0ad4e;}
+.stat-card.ok{border-left-color:var(--sucesso);}
+.stat-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--cinza);margin-bottom:8px;}
+.stat-value{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:28px;color:var(--verde);letter-spacing:-0.01em;white-space:nowrap;}
+.stat-value.money{font-size:clamp(13px,1.5vw,21px);letter-spacing:0em;white-space:nowrap;}
+.filters-bar{background:var(--branco);border-radius:var(--radius);padding:16px 20px;display:flex;gap:12px;align-items:flex-end;margin-bottom:16px;box-shadow:var(--shadow);flex-wrap:wrap;}
+.filter-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px;}
+.filter-group label{font-size:9px;}
+.filter-group select,.filter-group input{padding:7px 10px;font-size:13px;}
+.filter-search{flex:2;min-width:200px;}
+.table-wrapper{background:var(--branco);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.table-toolbar{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--creme-dark);}
+.table-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--cinza);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{background:var(--verde);color:rgba(245,240,232,0.8);font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:10px 14px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;}
+thead th:hover{color:var(--ouro-light);}
+thead th.sort-asc::after{content:' ▲';}thead th.sort-desc::after{content:' ▼';}
+tbody tr{border-bottom:1px solid var(--creme-dark);transition:background 0.15s;cursor:pointer;}
+tbody tr:hover{background:#f0ede5;}tbody tr:last-child{border-bottom:none;}
+td{padding:10px 14px;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+td.mono{font-family:'DM Mono',monospace;font-size:12px;}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:0.04em;}
+.badge-apagar{background:#fff3cd;color:#856404;}
+.badge-pago{background:#d4edda;color:#155724;}
+.modal-overlay{position:fixed;inset:0;background:rgba(26,58,42,0.5);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--branco);border-radius:var(--radius);width:90%;max-width:820px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:translateY(16px);transition:transform 0.25s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-header{padding:24px 28px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--creme-dark);position:sticky;top:0;background:var(--branco);z-index:1;}
+.modal-title{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--verde);}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--cinza);padding:4px 8px;border-radius:4px;transition:background 0.15s;}
+.modal-close:hover{background:var(--creme-dark);}
+.modal-body{padding:24px 28px;}
+.modal-footer{padding:16px 28px;border-top:1px solid var(--creme-dark);display:flex;gap:10px;justify-content:flex-end;}
+.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.detail-item{display:flex;flex-direction:column;gap:4px;}
+.detail-item .dl{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--cinza);}
+.detail-item .dv{font-size:14px;color:var(--texto);font-weight:500;}
+.detail-item.full{grid-column:span 3;}
+.toast{position:fixed;bottom:28px;right:28px;background:var(--verde);color:var(--ouro-light);font-family:'DM Mono',monospace;font-size:12px;padding:12px 20px;border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:300;transform:translateY(16px);opacity:0;transition:all 0.3s;display:flex;align-items:center;gap:8px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.empty-state{padding:60px 20px;text-align:center;color:var(--cinza);}
+.empty-state .icon{font-size:40px;margin-bottom:12px;}
+
+/* ── ANEXOS ── */
+.anexo-section {
+  margin: 24px 0 0;
+  padding: 24px;
+  background: var(--branco);
+  border-radius: var(--radius);
+  border: 1.5px dashed var(--cinza-light);
+}
+.anexo-section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  color: var(--verde-mid);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.anexo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.anexo-box {
+  border: 2px dashed var(--cinza-light);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--creme);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 100px;
+  justify-content: center;
+  position: relative;
+}
+.anexo-box:hover, .anexo-box.drag-over {
+  border-color: var(--verde-mid);
+  background: #e8f0e8;
+}
+.anexo-box input[type=file] { display: none; }
+.anexo-box .anexo-icon { font-size: 32px; }
+.anexo-box .anexo-label { font-size: 12px; color: var(--cinza); line-height: 1.4; }
+.anexo-box .anexo-nome {
+  font-size: 12px; font-weight: 600; color: var(--verde);
+  word-break: break-all; padding: 0 8px;
+}
+.anexo-remove {
+  position: absolute; top: 6px; right: 8px;
+  font-size: 16px; color: var(--erro); cursor: pointer;
+  line-height: 1; background: none; border: none;
+  display: none;
+}
+.anexo-box.tem-arquivo .anexo-remove { display: block; }
+.anexo-box.tem-arquivo { border-color: var(--verde-mid); border-style: solid; }
+
+/* Viewer */
+.viewer-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.88); z-index: 3000;
+  flex-direction: column; align-items: center; justify-content: center;
+}
+.viewer-overlay.open { display: flex; }
+.viewer-bar {
+  width: 95vw; max-width: 960px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 4px; color: #fff;
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+}
+.viewer-bar button {
+  background: rgba(255,255,255,.2); border: none; color: #fff;
+  padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.viewer-bar button:hover { background: rgba(255,255,255,.35); }
+.viewer-frame {
+  width: 95vw; max-width: 960px; height: 82vh;
+  background: #fff; border-radius: 10px; overflow: hidden;
+}
+.viewer-frame iframe, .viewer-frame img {
+  width: 100%; height: 100%; border: none; object-fit: contain;
+}
+/* Conciliação */
+.concil-row-ok   { background: #f0fdf4; }
+.concil-row-dup  { background: #fffbeb; }
+.concil-row-sem  { background: #fef2f2; }
+.concil-badge { display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700; }
+.concil-badge-ok  { background:#dcfce7;color:#166534; }
+.concil-badge-dup { background:#fef9c3;color:#854d0e; }
+.concil-badge-sem { background:#fee2e2;color:#991b1b; }
+/* Botões de anexo no detalhe */
+.btn-ver-anexo {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 2px solid var(--verde-mid); color: var(--verde);
+  background: var(--branco); transition: all .15s;
+  text-decoration: none;
+}
+.btn-ver-anexo:hover { background: var(--verde); color: var(--branco); }
+
+/* ══════════════════════════════════════════
+   RESPONSIVO MOBILE — max 768px
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ── HEADER ── */
+  header {
+    padding: 0 14px;
+    height: auto;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+  .logo {
+    font-size: 15px;
+    padding: 10px 0 4px;
+    flex: 1;
+  }
+  .logo span { display: none; }
+
+  /* botão Sair no header */
+  header > div:last-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0 4px;
+  }
+  header > div:last-child button {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+  .sync-indicator { display: none; }
+  #nav-user { display: none !important; }
+
+  /* nav-tabs vira barra inferior fixa */
+  .nav-tabs {
+    order: 99;
+    width: 100%;
+    background: var(--verde);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    gap: 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    padding: 4px 8px 6px;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.25);
+  }
+  .nav-tab {
+    flex: 1;
+    padding: 10px 4px 8px;
+    font-size: 9px;
+    border-radius: 8px;
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+  .nav-tab.active {
+    background: var(--ouro);
+    color: var(--verde);
+  }
+
+  /* padding inferior para não ficar atrás da nav fixa */
+  body { padding-bottom: 68px; }
+
+  /* ── FORMULÁRIO ── */
+  .form-container {
+    margin: 16px auto;
+    padding: 0 12px;
+  }
+  .form-header h1 {
+    font-size: 24px;
+  }
+  .form-section {
+    padding: 18px 16px;
+  }
+
+  /* Todos os grids viram 1 coluna */
+  .form-grid,
+  .form-grid.four {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  /* Exceto grids de 2 itens simples — ficam 2 colunas */
+  .form-grid.two-col {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .col-span-2 {
+    grid-column: span 1;
+  }
+
+  /* Status toggle */
+  .status-toggle { gap: 6px; }
+  .status-btn { font-size: 10px; padding: 10px 4px; }
+
+  /* Parcelas inline */
+  #f_parcelas { width: 60px !important; }
+
+  /* Ações do form */
+  .form-actions {
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    align-items: stretch;
+  }
+  .form-actions > div {
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+  .form-actions .btn, .form-actions button {
+    width: 100%;
+    justify-content: center;
+    font-size: 14px;
+    padding: 14px;
+  }
+  .save-feedback { justify-content: center; }
+
+  /* Parcelas preview */
+  .parcelas-preview { margin: 0 0 12px; }
+
+  /* ── ANEXOS ── */
+  .anexo-grid { grid-template-columns: 1fr; gap: 12px; }
+  .anexo-section { padding: 16px; }
+
+  /* ── PAINEL ── */
+  .panel-container {
+    margin: 16px auto;
+    padding: 0 12px;
+  }
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .panel-header h1 { font-size: 22px; }
+  .panel-header > div:last-child {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .panel-header .btn {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  /* Stats: 2 colunas */
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat-card { padding: 14px 16px; }
+  .stat-value { font-size: 18px; }
+  .stat-value.money { font-size: 14px; }
+
+  /* Filtros: coluna única */
+  .filters-bar {
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .filter-group { min-width: unset; flex: unset; width: 100%; }
+  .filter-search { min-width: unset; width: 100%; }
+  .filter-group select,
+  .filter-group input { padding: 10px 12px; font-size: 15px; }
+
+  /* Tabela: modo card horizontal com scroll */
+  .table-wrapper { border-radius: var(--radius); overflow: hidden; }
+  .table-toolbar {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .table-count { font-size: 10px; }
+
+  table { font-size: 12px; }
+  thead th { font-size: 8px; padding: 8px 10px; }
+  td { padding: 8px 10px; max-width: 140px; }
+
+  /* Esconde colunas menos importantes em mobile */
+  th:nth-child(7), td:nth-child(7),   /* fazenda */
+  th:nth-child(8), td:nth-child(8),   /* conta gerencial */
+  th:nth-child(9), td:nth-child(9),   /* conta */
+  th:nth-child(10), td:nth-child(10)  /* lancador */
+  { display: none; }
+
+  /* ── MODAL ── */
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: var(--radius) var(--radius) 0 0;
+    margin-top: auto;
+  }
+  .modal-overlay {
+    align-items: flex-end;
+  }
+  .modal-header { padding: 18px 18px 14px; }
+  .modal-body { padding: 16px 18px; }
+  .modal-footer { padding: 14px 18px; flex-wrap: wrap; gap: 8px; }
+  .modal-footer .btn { flex: 1; justify-content: center; }
+
+  .detail-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .detail-item.full { grid-column: span 2; }
+
+  .forma-btn {
+  padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--cinza-light);
+  background: var(--branco); color: var(--cinza); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.forma-btn.active {
+  background: var(--verde); color: white; border-color: var(--verde);
+}
+.forma-btn:hover:not(.active) { border-color: var(--verde); color: var(--verde); }
+
+/* ── RECIBO PREVIEW ── */
+#box_recibo { border-color: #3b82f6; }
+#box_recibo .anexo-icon { filter: none; }
+
+/* ── AUTOCOMPLETE FORNECEDOR ── */
+.forn-wrap { position: relative; }
+.forn-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 200;
+  background: var(--branco); border: 1.5px solid var(--cinza-light);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+  max-height: 260px; overflow-y: auto; display: none;
+}
+.forn-dropdown.show { display: block; }
+.forn-item {
+  padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--cinza-light);
+  transition: background 0.15s;
+}
+.forn-item:last-child { border-bottom: none; }
+.forn-item:hover, .forn-item.selected { background: var(--creme); }
+.forn-item-nome { font-weight: 600; font-size: 13px; color: var(--verde); }
+.forn-item-cnpj { font-size: 11px; color: var(--cinza); font-family: 'DM Mono', monospace; margin-top: 2px; }
+.forn-item-new { color: var(--ouro); font-style: italic; }
+
+/* ── TOAST ── */
+  .toast {
+    bottom: 80px; /* acima da nav bar */
+    right: 14px;
+    left: 14px;
+    font-size: 13px;
+    justify-content: center;
+  }
+
+  /* ── CONCILIAÇÃO ── */
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 400px) {
+  .form-header h1 { font-size: 20px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .detail-item.full { grid-column: span 1; }
+  .nav-tab { font-size: 8px; padding: 8px 2px; }
+}
+</style>
+<style>
+/* Ajustes específicos de relatórios */
+.rel-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.rel-tab{padding:9px 18px;border:1.5px solid var(--cinza-light);border-radius:10px;background:var(--branco);cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--cinza);transition:all .15s;}
+.rel-tab.active{background:var(--verde);border-color:var(--verde);color:var(--branco);}
+.rel-group-header{background:var(--verde);color:var(--branco);font-weight:700;font-size:12px;letter-spacing:.05em;}
+.rel-group-sub{background:#f0ede6;font-weight:600;}
+.rel-row-detalhe{font-size:12px;color:var(--cinza);}
+.rel-row-detalhe td{padding:5px 10px !important;}
+.rel-expand-btn{cursor:pointer;user-select:none;font-family:'DM Mono',monospace;font-size:11px;color:var(--verde);}
+</style>
+  <script src="config.js"></script>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">CONECTANDO AO BANCO…</div>
+</div>
+
+<header>
+  <div class="logo"><img src="icons/marca.png" alt="" style="height:30px;width:auto;background:#fff;border-radius:7px;padding:3px 6px;vertical-align:middle;margin-right:4px;">SANTA RITA <span>/ Relatórios</span></div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="sync-indicator">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncText" style="color:rgba(245,240,232,0.5)">—</span>
+    </div>
+    <button onclick="window.location.href='app.html';"
+      style="font-size:11px;padding:5px 13px;background:rgba(200,168,75,0.18);border:1px solid rgba(200,168,75,0.45);border-radius:8px;color:var(--ouro-light);cursor:pointer;font-family:'DM Mono',monospace;letter-spacing:.05em;font-weight:600;">← Lançamentos</button>
+    <button onclick="sessionStorage.removeItem('gf_user');sessionStorage.removeItem('gf_role');window.location.href='index.html';"
+      style="font-size:12px;padding:6px 16px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:8px;color:white;cursor:pointer;font-family:'DM Mono',monospace;letter-spacing:.05em;">⎋ Sair</button>
+  </div>
+</header>
+
+<div class="panel-container" style="max-width:1300px;margin:0 auto;padding:28px 24px;">
+  <div class="panel-header" style="margin-bottom:20px;">
+    <div>
+      <h1 style="margin:0;">Relatórios Gerenciais</h1>
+      <p id="subtitle" style="margin:4px 0 0;color:var(--cinza);font-size:13px;">Fechamento por fazenda, safra, cultura e conta gerencial</p>
+    </div>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filters-bar" style="margin-bottom:22px;">
+    <div class="filter-group"><label>Fazenda</label>
+      <select id="filtro-fazenda" onchange="gerar()"><option value="">Todas</option></select>
+    </div>
+    <div class="filter-group"><label>Safra/Ciclo</label>
+      <select id="filtro-safra" onchange="gerar()"><option value="">Todas</option><option>SAFRA 2025/2026</option><option>SAFRINHA 2026</option><option>SAFRA 2026/2027</option><option>SAFRINHA 2027</option><option>SAFRA 2027/2028</option><option>SAFRINHA 2028</option></select>
+    </div>
+    <div class="filter-group"><label>Cultura</label>
+      <select id="filtro-cultura" onchange="gerar()"><option value="">Todas</option><option>ALGODÃO</option><option>GADO</option><option>MILHETO</option><option>MILHO</option><option>PASTAGEM</option><option>RATEIO</option><option>SOJA</option><option>SORGO</option></select>
+    </div>
+    <div class="filter-group"><label>Conta Gerencial</label>
+      <select id="filtro-cg" onchange="gerar()"><option value="">Todas</option></select>
+    </div>
+    <div class="filter-group"><label>Status</label>
+      <select id="filtro-status" onchange="onStatusChange()">
+        <option value="">Todos</option>
+        <option value="PAGO">Pago (balanço realizado)</option>
+        <option value="A PAGAR">A pagar</option>
+      </select>
+    </div>
+    <div class="filter-group"><label>Período — De</label>
+      <input type="date" id="filtro-data-ini" onchange="gerar()" style="font-family:'DM Mono',monospace;font-size:12px;padding:6px 10px;border:1.5px solid var(--cinza-light);border-radius:8px;background:var(--branco);color:var(--texto);cursor:pointer;">
+    </div>
+    <div class="filter-group"><label>Período — Até</label>
+      <input type="date" id="filtro-data-fim" onchange="gerar()" style="font-family:'DM Mono',monospace;font-size:12px;padding:6px 10px;border:1.5px solid var(--cinza-light);border-radius:8px;background:var(--branco);color:var(--texto);cursor:pointer;">
+    </div>
+    <div class="filter-group"><label>Base da data</label>
+      <select id="filtro-base-data" onchange="gerar()">
+        <option value="vencimento">Vencimento</option>
+        <option value="data_doc">Data Documento</option>
+        <option value="pagamento">Pagamento</option>
+      </select>
+    </div>
+    <div style="align-self:flex-end;"><button class="btn btn-secondary" onclick="limparFiltros()" style="padding:8px 14px;font-size:11px;">✕ Limpar</button></div>
+  </div>
+
+  <!-- CARDS RESUMO -->
+  <div class="stats-grid" style="margin-bottom:22px;">
+    <div class="stat-card"><div class="stat-label">Lançamentos</div><div class="stat-value" id="card-qtd">—</div></div>
+    <div class="stat-card ouro"><div class="stat-label">Total Despesas</div><div class="stat-value money" id="card-total">—</div></div>
+    <div class="stat-card ok"><div class="stat-label">Pago</div><div class="stat-value money" id="card-pago">—</div></div>
+    <div class="stat-card warn"><div class="stat-label">A Pagar</div><div class="stat-value money" id="card-apagar">—</div></div>
+  </div>
+
+  <!-- ABAS DE VISÃO -->
+  <div class="rel-tabs">
+    <button class="rel-tab active" id="tab-resumo" onclick="setVisao('resumo')">▤ Resumo Gerencial</button>
+    <button class="rel-tab" id="tab-fazenda" onclick="setVisao('fazenda')">◈ Por Fazenda</button>
+    <button class="rel-tab" id="tab-detalhado" onclick="setVisao('detalhado')">☰ Detalhado</button>
+    <div style="flex:1;"></div>
+    <button class="btn btn-secondary" onclick="exportarExcel()" style="font-size:12px;">↓ Excel</button>
+    <button class="btn btn-secondary" onclick="exportarPDF()" style="font-size:12px;">↓ PDF</button>
+  </div>
+
+  <!-- CONTROLE DE AGRUPAMENTO (só no Resumo) -->
+  <div id="ctrl-agrupamento" style="margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:12px;color:var(--cinza);font-family:'DM Mono',monospace;">Agrupar por:</span>
+    <select id="agrupar-por" onchange="renderVisao()" style="font-size:12px;padding:6px 12px;border:1.5px solid var(--cinza-light);border-radius:8px;font-family:'DM Mono',monospace;">
+      <option value="grupo_cg">Grupo (DRE) → Conta Gerencial</option>
+      <option value="fazenda">Fazenda</option>
+      <option value="cultura">Cultura</option>
+      <option value="safra">Safra</option>
+      <option value="cg">Conta Gerencial</option>
+    </select>
+  </div>
+
+  <!-- ÁREA DO RELATÓRIO -->
+  <div class="table-wrapper">
+    <div style="overflow-x:auto;">
+      <div id="rel-conteudo"></div>
+    </div>
+    <div id="rel-vazio" class="empty-state" style="display:none;"><div class="icon">◈</div><p>Nenhum lançamento encontrado para os filtros.</p></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+const SB_URL = (window.APP_CONFIG||{}).SB_URL;
+const SB_KEY = (window.APP_CONFIG||{}).SB_KEY;
+const TABLE  = 'lancamentos';
+
+// Mapa Conta Gerencial → Grupo (DRE). Base para agrupamento e futuro DRE.
+const CG_GRUPOS = {
+  'CUSTO DIRETO': [
+    '13º SALÁRIO CAMPO',
+    'ALIMENTAÇÃO ANIMAL (RAÇÃO/SAL)',
+    'ARMAZENAGEM',
+    'ARRENDAMENTO DE TERRAS',
+    'COMBUSTÍVEIS E LUBRIFICANTES',
+    'DEFENSIVOS',
+    'DIESEL',
+    'ENCARGOS SOCIAIS (INSS/FGTS) CAMPO',
+    'ENERGIA PIVÔ',
+    'FERTILIZANTES (ADUBO)',
+    'FRETE',
+    'QUEROSENE',
+    'SALÁRIO CAMPO',
+    'SALÁRIO VARIÁVEL CAMPO',
+    'SANIDADE ANIMAL',
+    'SEMENTES',
+    'SERVIÇOS TERCEIRIZADOS',
+    'SUPRIMENTOS',
+    'TRATAMENTO DE SEMENTES (TS)',
+  ],
+  'DESP ADMINISTRATIVAS': [
+    '13º SALÁRIO ADM',
+    'ADVOGADO',
+    'CONTABILIDADE',
+    'DESPESAS BANCÁRIAS',
+    'ENCARGOS SOCIAIS (INSS/FGTS) ADM',
+    'ENERGIA / ÁGUA',
+    'EPI / SEGURANÇA DO TRABALHO',
+    'IMPOSTOS E TAXAS GERAIS',
+    'INTERNET / TELEFONE',
+    'MATERIAL DE CONSUMO E SUPRIMENTOS',
+    'PRO-LABORE',
+    'SALÁRIO ADM',
+    'SEGUROS',
+    'VIAGENS/DESLOCAMENTOS',
+  ],
+  'DESP FINANCEIRA': [
+    'JUROS CUSTEIO ANUAL',
+    'JUROS COM TERCEIROS',
+    'JUROS FINANCIAMENTO MÁQUINAS',
+    'JUROS LIMITES',
+  ],
+  'DESP OPERACIONAL': [
+    'MANUTENÇÃO MÁQUINAS',
+    'MANUTENÇÃO PROPRIEDADE',
+    'PEÇAS',
+  ],
+  'INVESTIMENTOS': [
+    'COMPRA DE MÁQUINAS',
+    'COMPRA DE TERRAS',
+    'INVESTIMENTO EM INFRAESTRUTURA',
+  ],
+  'MOVIMENTO PATRIMONIAL': [
+    'AMORTIZAÇÃO CUSTEIO (PRINCIPAL)',
+    'AMORTIZAÇÃO FINANCIAMENTO MÁQUINAS',
+    'COMPRA DE ANIMAIS/EMBRIÕES',
+  ],
+  'RECEITA': [
+    'OUTRAS RECEITAS OPERACIONAIS',
+    'VENDA GADO',
+    'VENDA MILHO',
+    'VENDA SOJA',
+    'VENDA SORGO',
+  ],
+};
+
+// Índice invertido: conta → grupo
+const CG_PARA_GRUPO = {};
+Object.keys(CG_GRUPOS).forEach(function(g){
+  CG_GRUPOS[g].forEach(function(c){ CG_PARA_GRUPO[c] = g; });
+});
+// Ordem dos grupos no DRE (despesas primeiro; receita por último)
+const ORDEM_GRUPOS = ['CUSTO DIRETO','DESP OPERACIONAL','DESP ADMINISTRATIVAS','DESP FINANCEIRA','INVESTIMENTOS','MOVIMENTO PATRIMONIAL','RECEITA'];
+
+var currentUser = sessionStorage.getItem('gf_user') || '';
+var currentRole = sessionStorage.getItem('gf_role') || 'funcionario';
+if(!currentUser) { window.location.href = 'index.html'; }
+
+let lancamentos = [], filtrados = [], visao = 'resumo';
+
+// ── SUPABASE ──
+async function sb(path, opts={}) {
+  const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers:{ 'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json',...(opts.headers||{}) }
+  });
+  if(!r.ok) throw new Error(`${r.status}: ${await r.text()}`);
+  const t=await r.text(); return t?JSON.parse(t):[];
+}
+
+async function loadData() {
+  setSync('syncing','Carregando…');
+  try {
+    lancamentos = []; var offset = 0;
+    while(true) {
+      var page = await sb(`${TABLE}?order=vencimento.asc&limit=1000&offset=${offset}`);
+      if(!page || !page.length) break;
+      lancamentos = lancamentos.concat(page);
+      if(page.length < 1000) break;
+      offset += 1000;
+    }
+    setSync('online', lancamentos.length + ' registros');
+    popularFiltroCG();
+    gerar();
+  } catch(e) { setSync('error','Erro'); showToast('⚠ '+e.message, true); }
+}
+
+// Preenche o filtro de Conta Gerencial com optgroups (mesma ordem do DRE)
+function popularFiltroCG() {
+  var sel = document.getElementById('filtro-cg');
+  var html = '<option value="">Todas</option>';
+  ORDEM_GRUPOS.forEach(function(g){
+    if(!CG_GRUPOS[g]) return;
+    html += '<optgroup label="'+g+'">';
+    CG_GRUPOS[g].forEach(function(c){ html += '<option>'+c+'</option>'; });
+    html += '</optgroup>';
+  });
+  sel.innerHTML = html;
+}
+
+// ── FILTRAGEM ──
+function getDataLanc(l) {
+  var base = document.getElementById('filtro-base-data').value;
+  return (l[base] || l.vencimento || l.data_doc || '').substring(0,10);
+}
+
+// Ao trocar o status, sugere a base de data mais adequada:
+// - PAGO → data de pagamento (quando o dinheiro saiu = balanço realizado)
+// - A PAGAR/Todos → vencimento
+function onStatusChange() {
+  var st = document.getElementById('filtro-status').value;
+  var base = document.getElementById('filtro-base-data');
+  if(st === 'PAGO' && base.value === 'vencimento') base.value = 'pagamento';
+  else if(st === '' && base.value === 'pagamento') base.value = 'vencimento';
+  gerar();
+}
+
+function gerar() {
+  var fFaz = document.getElementById('filtro-fazenda').value;
+  var fSafra = document.getElementById('filtro-safra').value;
+  var fCult = document.getElementById('filtro-cultura').value;
+  var fCg = document.getElementById('filtro-cg').value;
+  var fStatus = document.getElementById('filtro-status').value;
+  var dIni = document.getElementById('filtro-data-ini').value;
+  var dFim = document.getElementById('filtro-data-fim').value;
+
+  filtrados = lancamentos.filter(function(l){
+    if(fFaz && l.fazenda !== fFaz) return false;
+    if(fSafra && l.safra !== fSafra) return false;
+    if(fCult && l.cultura !== fCult) return false;
+    if(fCg && l.cg !== fCg) return false;
+    if(fStatus && l.status !== fStatus) return false;
+    if(dIni || dFim) {
+      var d = getDataLanc(l);
+      if(dIni && (!d || d < dIni)) return false;
+      if(dFim && (!d || d > dFim)) return false;
+    }
+    return true;
+  });
+  renderCards();
+  renderVisao();
+  var resumoTxt = filtrados.length + ' de ' + lancamentos.length + ' lançamentos';
+  document.getElementById('subtitle').textContent = resumoTxt;
+}
+
+function renderCards() {
+  var total = filtrados.reduce(function(s,l){ return s + (+l.valor||0); }, 0);
+  var pago = filtrados.filter(function(l){return l.status==='PAGO';}).reduce(function(s,l){return s+(+l.valor||0);},0);
+  var apagar = total - pago;
+  document.getElementById('card-qtd').textContent = filtrados.length.toLocaleString('pt-BR');
+  document.getElementById('card-total').textContent = fmtM(total);
+  document.getElementById('card-pago').textContent = fmtM(pago);
+  document.getElementById('card-apagar').textContent = fmtM(apagar);
+}
+
+// ── VISÕES ──
+function setVisao(v) {
+  visao = v;
+  ['resumo','fazenda','detalhado'].forEach(function(x){
+    document.getElementById('tab-'+x).classList.toggle('active', x===v);
+  });
+  document.getElementById('ctrl-agrupamento').style.display = (v==='resumo') ? 'flex' : 'none';
+  renderVisao();
+}
+
+function renderVisao() {
+  var cont = document.getElementById('rel-conteudo');
+  var vazio = document.getElementById('rel-vazio');
+  if(!filtrados.length) { cont.innerHTML=''; vazio.style.display='block'; return; }
+  vazio.style.display='none';
+  if(visao==='resumo') cont.innerHTML = htmlResumo();
+  else if(visao==='fazenda') cont.innerHTML = htmlPorFazenda();
+  else cont.innerHTML = htmlDetalhado();
+}
+
+// Agrupa filtrados por uma chave, retorna {chave: {itens:[], total:n}}
+function agrupar(chaveFn) {
+  var g = {};
+  filtrados.forEach(function(l){
+    var k = chaveFn(l) || '(sem classificação)';
+    if(!g[k]) g[k] = { itens:[], total:0 };
+    g[k].itens.push(l);
+    g[k].total += (+l.valor||0);
+  });
+  return g;
+}
+
+// ── VISÃO 1: RESUMO GERENCIAL (agrupamento configurável) ──
+function htmlResumo() {
+  var modo = document.getElementById('agrupar-por').value;
+  if(modo === 'grupo_cg') return htmlResumoDRE();
+
+  var chaveFn;
+  if(modo==='fazenda') chaveFn = function(l){return l.fazenda;};
+  else if(modo==='cultura') chaveFn = function(l){return l.cultura;};
+  else if(modo==='safra') chaveFn = function(l){return l.safra;};
+  else chaveFn = function(l){return l.cg;};
+
+  var grupos = agrupar(chaveFn);
+  var chaves = Object.keys(grupos).sort(function(a,b){ return grupos[b].total - grupos[a].total; });
+  var totalGeral = filtrados.reduce(function(s,l){return s+(+l.valor||0);},0);
+
+  var h = '<table><thead><tr>' +
+    '<th style="width:40px;"></th><th>'+_labelModo(modo)+'</th>' +
+    '<th style="text-align:right;">Qtd</th><th style="text-align:right;">Valor</th><th style="text-align:right;">%</th>' +
+    '</tr></thead><tbody>';
+  chaves.forEach(function(k, idx){
+    var gp = grupos[k];
+    var pct = totalGeral ? (gp.total/totalGeral*100) : 0;
+    h += '<tr style="cursor:pointer;background:#faf8f4;" onclick="toggleDet(\'g'+idx+'\')">' +
+      '<td><span class="rel-expand-btn" id="ic-g'+idx+'">▶</span></td>' +
+      '<td style="font-weight:600;">'+esc(k)+'</td>' +
+      '<td style="text-align:right;" class="mono">'+gp.itens.length+'</td>' +
+      '<td style="text-align:right;font-weight:700;" class="mono">'+fmtM(gp.total)+'</td>' +
+      '<td style="text-align:right;" class="mono">'+pct.toFixed(1)+'%</td>' +
+    '</tr>';
+    h += '<tr id="det-g'+idx+'" style="display:none;"><td colspan="5" style="padding:0;background:#fff;">' + htmlDetalheGrupo(gp.itens) + '</td></tr>';
+  });
+  h += '<tr class="rel-group-header"><td></td><td>TOTAL</td>' +
+    '<td style="text-align:right;">'+filtrados.length+'</td>' +
+    '<td style="text-align:right;">'+fmtM(totalGeral)+'</td><td style="text-align:right;">100%</td></tr>';
+  h += '</tbody></table>';
+  return h;
+}
+
+function _labelModo(m){
+  return {fazenda:'Fazenda',cultura:'Cultura',safra:'Safra',cg:'Conta Gerencial'}[m] || 'Grupo';
+}
+
+// ── VISÃO 1b: RESUMO no formato DRE (Grupo → Conta Gerencial) ──
+function htmlResumoDRE() {
+  // Agrupa por grupo do DRE, e dentro por conta gerencial
+  var porGrupo = {};
+  filtrados.forEach(function(l){
+    var grupo = CG_PARA_GRUPO[l.cg] || '(sem grupo)';
+    var conta = l.cg || '(sem conta)';
+    if(!porGrupo[grupo]) porGrupo[grupo] = { total:0, contas:{} };
+    if(!porGrupo[grupo].contas[conta]) porGrupo[grupo].contas[conta] = { itens:[], total:0 };
+    porGrupo[grupo].total += (+l.valor||0);
+    porGrupo[grupo].contas[conta].itens.push(l);
+    porGrupo[grupo].contas[conta].total += (+l.valor||0);
+  });
+  var totalGeral = filtrados.reduce(function(s,l){return s+(+l.valor||0);},0);
+
+  var h = '<table><thead><tr>' +
+    '<th style="width:40px;"></th><th>Grupo / Conta Gerencial</th>' +
+    '<th style="text-align:right;">Qtd</th><th style="text-align:right;">Valor</th><th style="text-align:right;">%</th>' +
+    '</tr></thead><tbody>';
+
+  // Ordena grupos conforme ORDEM_GRUPOS (os que existirem)
+  var gruposOrd = ORDEM_GRUPOS.filter(function(g){ return porGrupo[g]; });
+  Object.keys(porGrupo).forEach(function(g){ if(gruposOrd.indexOf(g)<0) gruposOrd.push(g); });
+
+  var gi = 0;
+  gruposOrd.forEach(function(grupo){
+    var gp = porGrupo[grupo];
+    var pctG = totalGeral ? (gp.total/totalGeral*100) : 0;
+    h += '<tr class="rel-group-header"><td></td>' +
+      '<td>'+esc(grupo)+'</td><td></td>' +
+      '<td style="text-align:right;">'+fmtM(gp.total)+'</td>' +
+      '<td style="text-align:right;">'+pctG.toFixed(1)+'%</td></tr>';
+    // Contas dentro do grupo, ordenadas por valor
+    var contasK = Object.keys(gp.contas).sort(function(a,b){ return gp.contas[b].total - gp.contas[a].total; });
+    contasK.forEach(function(conta){
+      var cc = gp.contas[conta];
+      var idd = 'dre'+(gi++);
+      h += '<tr style="cursor:pointer;" onclick="toggleDet(\''+idd+'\')">' +
+        '<td><span class="rel-expand-btn" id="ic-'+idd+'">▶</span></td>' +
+        '<td style="padding-left:24px;">'+esc(conta)+'</td>' +
+        '<td style="text-align:right;" class="mono">'+cc.itens.length+'</td>' +
+        '<td style="text-align:right;" class="mono">'+fmtM(cc.total)+'</td>' +
+        '<td style="text-align:right;" class="mono">'+(totalGeral?(cc.total/totalGeral*100).toFixed(1):'0')+'%</td>' +
+      '</tr>';
+      h += '<tr id="det-'+idd+'" style="display:none;"><td colspan="5" style="padding:0;background:#fff;">'+htmlDetalheGrupo(cc.itens)+'</td></tr>';
+    });
+  });
+  h += '<tr class="rel-group-header" style="background:var(--ouro);color:var(--verde);"><td></td><td>TOTAL DESPESAS</td><td></td>' +
+    '<td style="text-align:right;">'+fmtM(totalGeral)+'</td><td style="text-align:right;">100%</td></tr>';
+  h += '</tbody></table>';
+  return h;
+}
+
+// Tabela de detalhe (lançamentos de um grupo) — usada no drill-down
+function htmlDetalheGrupo(itens) {
+  var h = '<table style="margin:0;width:100%;font-size:12px;"><thead><tr class="rel-group-sub">' +
+    '<th style="padding:5px 10px;">Data</th><th style="padding:5px 10px;">Fornecedor</th>' +
+    '<th style="padding:5px 10px;">Fazenda</th><th style="padding:5px 10px;">Cultura</th>' +
+    '<th style="padding:5px 10px;">Conta</th><th style="padding:5px 10px;text-align:right;">Valor</th>' +
+    '<th style="padding:5px 10px;">Status</th></tr></thead><tbody>';
+  itens.slice().sort(function(a,b){ return getDataLanc(b).localeCompare(getDataLanc(a)); }).forEach(function(l){
+    h += '<tr class="rel-row-detalhe">' +
+      '<td class="mono">'+fmtD(getDataLanc(l))+'</td>' +
+      '<td>'+esc(l.fornecedor)+'</td>' +
+      '<td>'+esc(l.fazenda)+'</td>' +
+      '<td>'+esc(l.cultura)+'</td>' +
+      '<td>'+esc(l.cg)+'</td>' +
+      '<td style="text-align:right;" class="mono">'+fmtM(+l.valor||0)+'</td>' +
+      '<td><span class="badge '+(l.status==='PAGO'?'badge-pago':'badge-apagar')+'" style="font-size:10px;">'+esc(l.status)+'</span></td>' +
+    '</tr>';
+  });
+  h += '</tbody></table>';
+  return h;
+}
+
+function toggleDet(id) {
+  var row = document.getElementById('det-'+id);
+  var ic = document.getElementById('ic-'+id);
+  if(!row) return;
+  var vis = row.style.display !== 'none';
+  row.style.display = vis ? 'none' : '';
+  if(ic) ic.textContent = vis ? '▶' : '▼';
+}
+
+// ── VISÃO 2: POR FAZENDA (fechamento) ──
+function htmlPorFazenda() {
+  var porFaz = agrupar(function(l){ return l.fazenda; });
+  var fazendas = Object.keys(porFaz).sort(function(a,b){ return porFaz[b].total - porFaz[a].total; });
+  var totalGeral = filtrados.reduce(function(s,l){return s+(+l.valor||0);},0);
+
+  var h = '';
+  fazendas.forEach(function(faz){
+    var itens = porFaz[faz].itens;
+    var totalFaz = porFaz[faz].total;
+    // Dentro da fazenda, agrupa por grupo do DRE
+    var porGrupo = {};
+    itens.forEach(function(l){
+      var g = CG_PARA_GRUPO[l.cg] || '(sem grupo)';
+      if(!porGrupo[g]) porGrupo[g] = 0;
+      porGrupo[g] += (+l.valor||0);
+    });
+    h += '<div style="margin-bottom:26px;border:1px solid var(--cinza-light);border-radius:12px;overflow:hidden;">';
+    h += '<div style="background:var(--verde);color:var(--branco);padding:12px 18px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<span style="font-weight:700;font-size:15px;">◈ '+esc(faz)+'</span>' +
+      '<span style="font-family:IBM Plex Mono,monospace;font-weight:700;font-size:15px;">'+fmtM(totalFaz)+'</span></div>';
+    h += '<table style="margin:0;"><tbody>';
+    var gruposOrd = ORDEM_GRUPOS.filter(function(g){ return porGrupo[g]; });
+    Object.keys(porGrupo).forEach(function(g){ if(gruposOrd.indexOf(g)<0) gruposOrd.push(g); });
+    gruposOrd.forEach(function(g){
+      var pct = totalFaz ? (porGrupo[g]/totalFaz*100) : 0;
+      h += '<tr><td style="padding:8px 18px;font-weight:600;">'+esc(g)+'</td>' +
+        '<td style="padding:8px 18px;text-align:right;" class="mono">'+fmtM(porGrupo[g])+'</td>' +
+        '<td style="padding:8px 18px;text-align:right;width:70px;" class="mono" style="color:var(--cinza);">'+pct.toFixed(1)+'%</td></tr>';
+    });
+    h += '<tr style="background:#f0ede6;"><td style="padding:9px 18px;font-weight:700;">Total '+esc(faz)+'</td>' +
+      '<td style="padding:9px 18px;text-align:right;font-weight:700;" class="mono">'+fmtM(totalFaz)+'</td>' +
+      '<td style="padding:9px 18px;text-align:right;" class="mono">'+(totalGeral?(totalFaz/totalGeral*100).toFixed(1):'0')+'%</td></tr>';
+    h += '</tbody></table></div>';
+  });
+  h += '<div style="text-align:right;padding:12px 18px;background:var(--ouro);border-radius:10px;font-weight:700;font-size:16px;color:var(--verde);">' +
+    'TOTAL GERAL: '+fmtM(totalGeral)+'</div>';
+  return h;
+}
+
+// ── VISÃO 3: DETALHADO ──
+function htmlDetalhado() {
+  var ordenados = filtrados.slice().sort(function(a,b){ return getDataLanc(b).localeCompare(getDataLanc(a)); });
+  var total = ordenados.reduce(function(s,l){return s+(+l.valor||0);},0);
+  var h = '<table><thead><tr>' +
+    '<th>Data</th><th>Fornecedor</th><th>Documento</th><th>Fazenda</th><th>Safra</th>' +
+    '<th>Cultura</th><th>Conta Gerencial</th><th style="text-align:right;">Valor</th><th>Status</th>' +
+    '</tr></thead><tbody>';
+  ordenados.forEach(function(l){
+    h += '<tr>' +
+      '<td class="mono">'+fmtD(getDataLanc(l))+'</td>' +
+      '<td>'+esc(l.fornecedor)+'</td>' +
+      '<td class="mono" style="font-size:11px;">'+esc(l.documento)+'</td>' +
+      '<td>'+esc(l.fazenda)+'</td>' +
+      '<td style="font-size:12px;">'+esc(l.safra)+'</td>' +
+      '<td>'+esc(l.cultura)+'</td>' +
+      '<td style="font-size:12px;">'+esc(l.cg)+'</td>' +
+      '<td style="text-align:right;font-weight:600;" class="mono">'+fmtM(+l.valor||0)+'</td>' +
+      '<td><span class="badge '+(l.status==='PAGO'?'badge-pago':'badge-apagar')+'" style="font-size:10px;">'+esc(l.status)+'</span></td>' +
+    '</tr>';
+  });
+  h += '<tr class="rel-group-header"><td colspan="7">TOTAL ('+ordenados.length+' lançamentos)</td>' +
+    '<td style="text-align:right;">'+fmtM(total)+'</td><td></td></tr>';
+  h += '</tbody></table>';
+  return h;
+}
+
+// ── FILTROS: limpar ──
+function limparFiltros() {
+  ['filtro-fazenda','filtro-safra','filtro-cultura','filtro-cg','filtro-status','filtro-data-ini','filtro-data-fim'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('filtro-base-data').value = 'vencimento';
+  gerar();
+}
+
+// ── UTILS ──
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtM(v){ return 'R$ '+(+v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtD(d){ if(!d) return '—'; var p=d.substring(0,10).split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; }
+function setSync(state,text){
+  document.getElementById('syncDot').className='sync-dot '+state;
+  var t=document.getElementById('syncText'); t.textContent=text;
+  t.style.color = state==='online'?'rgba(39,174,96,.8)':state==='error'?'rgba(192,57,43,.8)':'rgba(200,168,75,.8)';
+}
+function showToast(msg,err){
+  var t=document.getElementById('toast'); t.textContent=msg;
+  t.style.background=err?'var(--erro)':'var(--verde)';
+  t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},3500);
+}
+function setLoading(show,txt){
+  document.getElementById('loadingOverlay').classList.toggle('hidden',!show);
+  if(txt) document.getElementById('loadingText').textContent=txt;
+}
+
+
+// ══════════════════════════════════════════
+// EXPORTAÇÃO — EXCEL (múltiplas abas) e PDF
+// ══════════════════════════════════════════
+function _resumoParaAoA() {
+  // Monta os dados do Resumo DRE como matriz (para Excel)
+  var porGrupo = {};
+  filtrados.forEach(function(l){
+    var grupo = CG_PARA_GRUPO[l.cg] || '(sem grupo)';
+    var conta = l.cg || '(sem conta)';
+    if(!porGrupo[grupo]) porGrupo[grupo] = { total:0, contas:{} };
+    if(!porGrupo[grupo].contas[conta]) porGrupo[grupo].contas[conta] = 0;
+    porGrupo[grupo].total += (+l.valor||0);
+    porGrupo[grupo].contas[conta] += (+l.valor||0);
+  });
+  var totalGeral = filtrados.reduce(function(s,l){return s+(+l.valor||0);},0);
+  var rows = [['Grupo (DRE)','Conta Gerencial','Valor (R$)','% do Total']];
+  var gruposOrd = ORDEM_GRUPOS.filter(function(g){ return porGrupo[g]; });
+  Object.keys(porGrupo).forEach(function(g){ if(gruposOrd.indexOf(g)<0) gruposOrd.push(g); });
+  gruposOrd.forEach(function(grupo){
+    var gp = porGrupo[grupo];
+    rows.push([grupo, '', +gp.total.toFixed(2), totalGeral?(gp.total/totalGeral*100).toFixed(1)+'%':'0%']);
+    Object.keys(gp.contas).sort(function(a,b){return gp.contas[b]-gp.contas[a];}).forEach(function(conta){
+      rows.push(['', conta, +gp.contas[conta].toFixed(2), totalGeral?(gp.contas[conta]/totalGeral*100).toFixed(1)+'%':'0%']);
+    });
+  });
+  rows.push(['TOTAL DESPESAS','', +totalGeral.toFixed(2), '100%']);
+  return rows;
+}
+
+function _porFazendaParaAoA() {
+  var porFaz = agrupar(function(l){ return l.fazenda; });
+  var totalGeral = filtrados.reduce(function(s,l){return s+(+l.valor||0);},0);
+  var rows = [['Fazenda','Grupo (DRE)','Valor (R$)','% da Fazenda']];
+  Object.keys(porFaz).sort(function(a,b){return porFaz[b].total-porFaz[a].total;}).forEach(function(faz){
+    var itens = porFaz[faz].itens, totalFaz = porFaz[faz].total;
+    var porGrupo = {};
+    itens.forEach(function(l){ var g=CG_PARA_GRUPO[l.cg]||'(sem grupo)'; porGrupo[g]=(porGrupo[g]||0)+(+l.valor||0); });
+    var gruposOrd = ORDEM_GRUPOS.filter(function(g){ return porGrupo[g]; });
+    Object.keys(porGrupo).forEach(function(g){ if(gruposOrd.indexOf(g)<0) gruposOrd.push(g); });
+    rows.push([faz, '', +totalFaz.toFixed(2), '']);
+    gruposOrd.forEach(function(g){
+      rows.push(['', g, +porGrupo[g].toFixed(2), totalFaz?(porGrupo[g]/totalFaz*100).toFixed(1)+'%':'0%']);
+    });
+  });
+  rows.push(['TOTAL GERAL','', +totalGeral.toFixed(2), '']);
+  return rows;
+}
+
+function _detalhadoParaAoA() {
+  var rows = [['Data','Fornecedor','CNPJ','Documento','Fazenda','Safra','Cultura','Conta Gerencial','Grupo (DRE)','Valor (R$)','Status']];
+  filtrados.slice().sort(function(a,b){return getDataLanc(a).localeCompare(getDataLanc(b));}).forEach(function(l){
+    rows.push([
+      fmtD(getDataLanc(l)), l.fornecedor||'', l.cnpj||'', l.documento||'',
+      l.fazenda||'', l.safra||'', l.cultura||'', l.cg||'',
+      CG_PARA_GRUPO[l.cg]||'', +(+l.valor||0).toFixed(2), l.status||''
+    ]);
+  });
+  return rows;
+}
+
+function _descFiltros() {
+  var f = [];
+  var fz=document.getElementById('filtro-fazenda').value; if(fz) f.push('Fazenda: '+fz);
+  var sf=document.getElementById('filtro-safra').value; if(sf) f.push('Safra: '+sf);
+  var cu=document.getElementById('filtro-cultura').value; if(cu) f.push('Cultura: '+cu);
+  var cg=document.getElementById('filtro-cg').value; if(cg) f.push('Conta: '+cg);
+  var st=document.getElementById('filtro-status').value; if(st) f.push('Status: '+st);
+  var di=document.getElementById('filtro-data-ini').value;
+  var df=document.getElementById('filtro-data-fim').value;
+  if(di||df) f.push('Período: '+(di?fmtD(di):'início')+' a '+(df?fmtD(df):'hoje'));
+  return f.length ? f.join('  ·  ') : 'Todos os lançamentos';
+}
+
+function exportarExcel() {
+  if(!filtrados.length) { showToast('⚠ Nada para exportar', true); return; }
+  showToast('⏳ Gerando Excel…');
+  try {
+    var wb = XLSX.utils.book_new();
+    // Aba 1: Resumo DRE
+    var ws1 = XLSX.utils.aoa_to_sheet(_resumoParaAoA());
+    ws1['!cols']=[{wch:26},{wch:34},{wch:16},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws1, 'Resumo DRE');
+    // Aba 2: Por Fazenda
+    var ws2 = XLSX.utils.aoa_to_sheet(_porFazendaParaAoA());
+    ws2['!cols']=[{wch:22},{wch:26},{wch:16},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Por Fazenda');
+    // Aba 3: Detalhado
+    var ws3 = XLSX.utils.aoa_to_sheet(_detalhadoParaAoA());
+    ws3['!cols']=[{wch:12},{wch:28},{wch:18},{wch:16},{wch:16},{wch:14},{wch:12},{wch:26},{wch:20},{wch:16},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, ws3, 'Detalhado');
+    var data = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, 'RELATORIO_SANTARITA_'+data+'.xlsx');
+    showToast('✓ Excel exportado!');
+  } catch(e){ showToast('⚠ '+e.message, true); }
+}
+
+function exportarPDF() {
+  if(!filtrados.length) { showToast('⚠ Nada para exportar', true); return; }
+  showToast('⏳ Gerando PDF…');
+  try {
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF('p','mm','a4');
+    var W = doc.internal.pageSize.getWidth();
+    // Cabeçalho
+    doc.setFillColor(26,58,42); doc.rect(0,0,W,26,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(15);
+    doc.text('FAZENDA SANTA RITA', 14, 12);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text('Relatório Gerencial de Despesas', 14, 19);
+    doc.setFontSize(8);
+    doc.text(new Date().toLocaleDateString('pt-BR'), W-14, 12, {align:'right'});
+
+    doc.setTextColor(80,80,80); doc.setFontSize(8);
+    doc.text(_descFiltros(), 14, 32, {maxWidth:W-28});
+
+    var totalGeral = filtrados.reduce(function(s,l){return s+(+l.valor||0);},0);
+
+    // Tabela: Resumo DRE
+    var body = _resumoParaAoA().slice(1).map(function(r){
+      return [r[0], r[1], fmtM(r[2]).replace('R$ ',''), r[3]];
+    });
+    doc.autoTable({
+      startY: 38,
+      head: [['Grupo (DRE)','Conta Gerencial','Valor (R$)','%']],
+      body: body,
+      theme:'grid',
+      headStyles:{ fillColor:[26,58,42], textColor:255, fontSize:8 },
+      bodyStyles:{ fontSize:7.5 },
+      columnStyles:{ 2:{halign:'right'}, 3:{halign:'right'} },
+      didParseCell: function(data){
+        // Destaca linhas de grupo (quando col 1 vazia e não é total)
+        if(data.section==='body' && data.row.raw[1]==='' && data.row.raw[0]!=='TOTAL DESPESAS') {
+          data.cell.styles.fillColor = [240,237,230];
+          data.cell.styles.fontStyle = 'bold';
+        }
+        if(data.section==='body' && data.row.raw[0]==='TOTAL DESPESAS') {
+          data.cell.styles.fillColor = [200,168,75];
+          data.cell.styles.textColor = [26,58,42];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+
+    // Rodapé
+    var totalPag = doc.internal.getNumberOfPages();
+    for(var i=1;i<=totalPag;i++){
+      doc.setPage(i);
+      doc.setFontSize(7); doc.setTextColor(150,150,150);
+      doc.text('Fazenda Santa Rita — Relatório gerado em '+new Date().toLocaleString('pt-BR'), 14, doc.internal.pageSize.getHeight()-8);
+      doc.text('Pág. '+i+'/'+totalPag, W-14, doc.internal.pageSize.getHeight()-8, {align:'right'});
+    }
+
+    var data = new Date().toISOString().split('T')[0];
+    doc.save('RELATORIO_SANTARITA_'+data+'.pdf');
+    showToast('✓ PDF exportado!');
+  } catch(e){ showToast('⚠ '+e.message, true); console.error(e); }
+}
+
+async function init() {
+  setLoading(true,'CONECTANDO AO BANCO…');
+  try { await loadData(); setLoading(false); }
+  catch(e){ setLoading(false); setSync('error','Falha'); showToast('⚠ '+e.message,true); }
+}
+init();
+</script>
+</body>
+</html>

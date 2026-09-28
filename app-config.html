@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Santa Rita — Configurações</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=IBM+Plex+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --verde:#1a3a2a; --verde-mid:#2d5a3d; --verde-light:#3d7a52;
+  --ouro:#c8a84b; --ouro-light:#e8c96a;
+  --creme:#f5f0e8; --branco:#fdfaf6;
+  --texto:#1a1a1a; --cinza:#888; --cinza-light:#e8e4de;
+  --radius:14px; --shadow:0 2px 16px rgba(0,0,0,0.08);
+  --vermelho:#c0392b; --azul:#2471a3;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Syne',sans-serif;background:var(--creme);min-height:100vh;color:var(--texto);}
+
+/* HEADER */
+header{background:var(--verde);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3);}
+.logo{color:var(--ouro);font-weight:800;font-size:18px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;}
+.logo-sep{color:rgba(255,255,255,.35);font-size:14px;font-weight:400;}
+.logo-page{color:rgba(255,255,255,.75);font-size:14px;font-weight:500;}
+.header-right{display:flex;align-items:center;gap:12px;}
+.btn-header{font-size:12px;padding:5px 14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:white;cursor:pointer;font-family:DM Mono,monospace;letter-spacing:.05em;transition:background .2s;}
+.btn-header:hover{background:rgba(255,255,255,.22);}
+#nav-user{font-size:12px;color:rgba(255,255,255,.6);font-family:DM Mono,monospace;}
+
+/* LAYOUT */
+.page{max-width:1100px;margin:0 auto;padding:32px 24px;}
+.page-title{font-size:28px;font-weight:800;color:var(--verde);margin-bottom:4px;}
+.page-sub{font-size:13px;color:var(--cinza);font-family:DM Mono,monospace;margin-bottom:32px;}
+
+/* TABS */
+.tabs{display:flex;gap:4px;background:var(--branco);border-radius:12px;padding:5px;box-shadow:var(--shadow);margin-bottom:28px;width:fit-content;}
+.tab{padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--cinza);transition:all .18s;letter-spacing:.01em;}
+.tab.active{background:var(--verde);color:white;}
+.tab:hover:not(.active){background:var(--cinza-light);color:var(--texto);}
+
+/* SECTION */
+.section{display:none;}
+.section.active{display:block;}
+
+/* CARD */
+.card{background:var(--branco);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px;}
+.card-head{padding:16px 24px;border-bottom:1px solid var(--cinza-light);display:flex;align-items:center;justify-content:space-between;}
+.card-head h3{font-size:14px;font-weight:700;color:var(--verde);letter-spacing:.06em;text-transform:uppercase;}
+.card-body{padding:24px;}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;}
+thead th{background:var(--verde);color:rgba(245,240,232,.8);font-family:DM Mono,monospace;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:10px 8px;text-align:left;}
+tbody tr{border-bottom:1px solid var(--cinza-light);transition:background .12s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(26,58,42,.03);}
+td{padding:10px 8px;font-size:14px;}
+td.mono{font-family:DM Mono,monospace;font-size:12px;}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.04em;font-family:DM Mono,monospace;}
+.badge.gestor{background:rgba(200,168,75,.15);color:#7a5f10;}
+.badge.funcionario{background:rgba(26,58,42,.1);color:var(--verde);}
+.badge.inativo{background:#eee;color:#999;}
+
+/* FORMS */
+.field-row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px;}
+label.lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cinza);font-family:DM Mono,monospace;}
+input.inp,select.inp{padding:10px 14px;border:1.5px solid var(--cinza-light);border-radius:10px;font-size:14px;font-family:'Syne',sans-serif;color:var(--texto);background:white;outline:none;transition:border .15s;}
+input.inp:focus,select.inp:focus{border-color:var(--verde);}
+
+/* BUTTONS */
+.btn{padding:9px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .15s;letter-spacing:.02em;}
+.btn-primary{background:var(--verde);color:white;}
+.btn-primary:hover{background:var(--verde-mid);}
+.btn-danger{background:var(--vermelho);color:white;}
+.btn-danger:hover{filter:brightness(1.1);}
+.btn-ghost{background:transparent;color:var(--cinza);border:1.5px solid var(--cinza-light);}
+.btn-ghost:hover{background:var(--cinza-light);}
+.btn-sm{padding:5px 12px;font-size:12px;border-radius:7px;}
+.btn-ouro{background:var(--ouro);color:white;}
+.btn-ouro:hover{background:var(--ouro-light);}
+
+/* USUARIO CARDS */
+.user-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.user-card{background:var(--branco);border:1.5px solid var(--cinza-light);border-radius:12px;padding:20px;transition:border .15s;}
+.user-card:hover{border-color:var(--verde-light);}
+.user-card-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--verde);color:var(--ouro);font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.user-name{font-weight:700;font-size:15px;color:var(--texto);}
+.user-login{font-size:11px;color:var(--cinza);font-family:DM Mono,monospace;}
+.user-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--cinza-light);}
+
+/* ROLE SELECT */
+.role-select{padding:5px 10px;border:1.5px solid var(--cinza-light);border-radius:8px;font-size:12px;font-family:DM Mono,monospace;color:var(--texto);outline:none;cursor:pointer;}
+.role-select:focus{border-color:var(--verde);}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:white;border-radius:16px;padding:32px;width:420px;max-width:calc(100vw - 32px);box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal h3{font-size:18px;font-weight:800;color:var(--verde);margin-bottom:20px;}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;}
+
+/* REPORT */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+.stat-box{background:var(--creme);border-radius:10px;padding:16px 20px;}
+.stat-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cinza);font-family:DM Mono,monospace;margin-bottom:6px;}
+.stat-value{font-size:24px;font-weight:700;color:var(--verde);font-family:"IBM Plex Mono",monospace;letter-spacing:-0.01em;}
+.stat-sub{font-size:11px;color:var(--cinza);font-family:DM Mono,monospace;margin-top:2px;}
+
+/* BAR CHART */
+.bar-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.bar-user{width:90px;font-size:12px;font-weight:600;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-track{flex:1;background:var(--cinza-light);border-radius:6px;height:22px;overflow:hidden;}
+.bar-fill{height:100%;background:var(--verde);border-radius:6px;display:flex;align-items:center;padding:0 8px;font-size:11px;color:white;font-weight:700;font-family:DM Mono,monospace;min-width:32px;transition:width .6s ease;}
+.bar-total{width:40px;text-align:right;font-size:12px;font-family:DM Mono,monospace;color:var(--cinza);}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;right:28px;background:var(--verde);color:white;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:999;transform:translateY(20px);opacity:0;transition:all .25s;pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.err{background:var(--vermelho);}
+
+/* ACESSO */
+.access-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;}
+.access-item{display:flex;align-items:center;justify-content:space-between;background:var(--creme);border-radius:8px;padding:12px 16px;}
+.access-label{font-size:13px;font-weight:600;}
+.access-desc{font-size:11px;color:var(--cinza);font-family:DM Mono,monospace;margin-top:2px;}
+.toggle{position:relative;width:48px;height:26px;cursor:pointer;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{
+  position:absolute;inset:0;background:#d9534f;border-radius:13px;
+  transition:background .25s,box-shadow .25s;
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-slider:before{
+  content:'';position:absolute;width:20px;height:20px;
+  left:3px;bottom:3px;background:white;border-radius:50%;
+  transition:transform .25s;box-shadow:0 1px 4px rgba(0,0,0,.25);
+}
+.toggle input:checked + .toggle-slider{background:#27ae60;box-shadow:inset 0 1px 3px rgba(0,0,0,.15),0 0 0 2px rgba(39,174,96,.2);}
+.toggle input:checked + .toggle-slider:before{transform:translateX(22px);}
+.toggle input:disabled + .toggle-slider{opacity:0.4;cursor:not-allowed;}
+/* Label ao lado do toggle mostrando estado */
+.toggle-wrap{display:flex;align-items:center;gap:6px;justify-content:center;}
+.toggle-label{font-family:DM Mono,monospace;font-size:10px;font-weight:600;min-width:28px;}
+.toggle input:checked ~ .toggle-label{color:var(--verde);}
+.toggle-wrap .toggle-label{color:#bbb;}
+.toggle-wrap:has(input:checked) .toggle-label{color:var(--verde);}
+
+@media(max-width:600px){
+  .page{padding:20px 12px;}
+  .tabs{width:100%;}
+  .tab{flex:1;text-align:center;padding:8px 10px;}
+}
+</style>
+  <script src="config.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <img src="icons/marca.png" alt="" style="height:30px;width:auto;background:#fff;border-radius:7px;padding:3px 6px;vertical-align:middle;margin-right:4px;"><span>SANTA RITA</span>
+    <span class="logo-sep">/</span>
+    <span class="logo-page">Configurações</span>
+  </div>
+  <div class="header-right">
+    <span id="nav-user"></span>
+    <button class="btn-header" onclick="window.location.href='app.html'">← Lançamentos</button>
+    <button class="btn-header" onclick="sair()">⎋ Sair</button>
+  </div>
+</header>
+
+<div class="page">
+  <div class="page-title">Configurações</div>
+  <div class="page-sub" id="sub-text">Gerenciamento de usuários, acessos e relatórios</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('usuarios')">👤 Usuários</button>
+    <button class="tab" onclick="showTab('senhas')">🔑 Senhas</button>
+    <button class="tab" onclick="showTab('acessos')">🔒 Acessos</button>
+    <button class="tab" onclick="showTab('relatorio')">📊 Relatório</button>
+  </div>
+
+  <!-- TAB: USUÁRIOS -->
+  <div id="tab-usuarios" class="section active">
+    <div class="card">
+      <div class="card-head">
+        <h3>Usuários cadastrados</h3>
+        <span id="total-users" style="font-size:12px;color:var(--cinza);font-family:DM Mono,monospace;"></span>
+      </div>
+      <div class="card-body">
+        <div class="user-grid" id="user-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: SENHAS -->
+  <div id="tab-senhas" class="section">
+    <div class="card">
+      <div class="card-head"><h3>Alterar senha</h3></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--cinza);margin-bottom:20px;">Gestores podem alterar a senha de qualquer usuário. Funcionários só podem alterar a própria senha.</p>
+        <div class="field-row">
+          <div class="field">
+            <label class="lbl">Usuário</label>
+            <select class="inp" id="senha-user"></select>
+          </div>
+          <div class="field">
+            <label class="lbl">Nova senha</label>
+            <input class="inp" type="password" id="senha-nova" placeholder="Nova senha" minlength="6">
+          </div>
+          <div class="field">
+            <label class="lbl">Confirmar</label>
+            <input class="inp" type="password" id="senha-conf" placeholder="Confirmar senha">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="alterarSenha()">🔑 Salvar nova senha</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Minha senha</h3></div>
+      <div class="card-body">
+        <div class="field-row">
+          <div class="field">
+            <label class="lbl">Senha atual</label>
+            <input class="inp" type="password" id="minha-atual" placeholder="Senha atual">
+          </div>
+          <div class="field">
+            <label class="lbl">Nova senha</label>
+            <input class="inp" type="password" id="minha-nova" placeholder="Nova senha">
+          </div>
+          <div class="field">
+            <label class="lbl">Confirmar</label>
+            <input class="inp" type="password" id="minha-conf" placeholder="Confirmar">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="alterarMinhaSenha()">🔑 Alterar minha senha</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: ACESSOS -->
+  <div id="tab-acessos" class="section">
+
+    <!-- Legenda dos perfis -->
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+      <div style="background:rgba(200,168,75,.1);border:1.5px solid rgba(200,168,75,.3);border-radius:10px;padding:14px 20px;flex:1;min-width:200px;">
+        <div style="font-weight:700;font-size:13px;color:#7a5f10;margin-bottom:8px;">◈ GESTOR — todas as permissões</div>
+        <div style="font-size:11px;color:var(--cinza);font-family:DM Mono,monospace;">Acesso total ao sistema. Permissões individuais abaixo não se aplicam.</div>
+      </div>
+      <div style="background:rgba(26,58,42,.07);border:1.5px solid rgba(26,58,42,.15);border-radius:10px;padding:14px 20px;flex:1;min-width:200px;">
+        <div style="font-weight:700;font-size:13px;color:var(--verde);margin-bottom:8px;">◦ FUNCIONÁRIO — permissões básicas + extras abaixo</div>
+        <div style="font-size:11px;color:var(--cinza);font-family:DM Mono,monospace;">Pode lançar e ver painel. Funcionalidades extras são liberadas individualmente.</div>
+      </div>
+    </div>
+
+    <!-- Tabela de permissões por usuário -->
+    <div class="card">
+      <div class="card-head">
+        <h3>Permissões por usuário</h3>
+        <span style="font-size:11px;color:var(--cinza);font-family:DM Mono,monospace;">Clique nos botões para liberar/bloquear</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="perm-table">
+          <thead>
+            <tr>
+              <th style="min-width:90px;">Usuário</th>
+              <th style="text-align:center;min-width:70px;">Perfil</th>
+              <th style="text-align:center;min-width:120px;">Conciliação</th>
+              <th style="text-align:center;min-width:120px;">Endividamento</th>
+              <th style="text-align:center;min-width:120px;">Excluir reg.</th>
+              <th style="text-align:center;min-width:120px;">Exportar XLS</th>
+              <th style="text-align:center;min-width:120px;">Configurações</th>
+              <th style="text-align:center;min-width:120px;border-left:3px solid var(--ouro);color:#ffd9d9;">Receitas</th>
+              <th style="text-align:center;min-width:120px;border-left:3px solid var(--ouro);color:#ffd9d9;">Relatórios</th>
+            </tr>
+          </thead>
+          <tbody id="perm-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: RELATÓRIO -->
+  <div id="tab-relatorio" class="section">
+    <div class="card">
+      <div class="card-head">
+        <h3>Relatório de lançamentos por usuário</h3>
+        <button class="btn btn-sm btn-ouro" onclick="carregarRelatorio()">↺ Atualizar</button>
+      </div>
+      <div class="card-body">
+        <div class="stat-row" id="rel-stats"></div>
+        <div id="rel-bars" style="margin-bottom:24px;"></div>
+        <div style="overflow-x:auto;">
+          <table id="rel-table">
+            <thead><tr>
+              <th>Usuário / Login</th>
+              <th style="text-align:right">Total</th>
+              <th style="text-align:right">A Pagar</th>
+              <th style="text-align:right">Pago</th>
+              <th style="text-align:right">Valor Total</th>
+              <th>Último lançamento</th>
+            </tr></thead>
+            <tbody id="rel-tbody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:20px;text-align:right;">
+          <button class="btn btn-ghost btn-sm" onclick="exportarRelatorio()">↓ Exportar CSV</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ALTERAR ROLE -->
+<div class="modal-overlay" id="modal-role">
+  <div class="modal">
+    <h3>Alterar perfil de acesso</h3>
+    <p id="modal-role-text" style="font-size:14px;color:var(--cinza);margin-bottom:20px;"></p>
+    <div class="field">
+      <label class="lbl">Novo perfil</label>
+      <select class="inp" id="modal-role-sel">
+        <option value="gestor">◈ Gestor</option>
+        <option value="funcionario">◦ Funcionário</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-role')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarRole()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// CONFIGURAÇÃO DE USUÁRIOS
+// Os dados de usuários e roles ficam em localStorage
+// para persistir entre sessões sem backend extra
+// ═══════════════════════════════════════════════════
+
+// Usuários base (sem roles, para manter compatibilidade com index.html)
+// Roles e senhas são gerenciadas aqui via localStorage
+var USERS_BASE = ['admin'];
+
+var currentUser = sessionStorage.getItem('gf_user') || '';
+var currentLogin = currentUser.toLowerCase();
+
+// Se não tiver role salvo (index.html antigo), inferir pelo login
+var GESTORES_DEFAULT = ['admin'];
+var currentRole = sessionStorage.getItem('gf_role') ||
+  (GESTORES_DEFAULT.indexOf(currentLogin) >= 0 ? 'gestor' : 'funcionario');
+
+// Salvar role inferido para uso posterior
+if(!sessionStorage.getItem('gf_role') && currentRole) {
+  sessionStorage.setItem('gf_role', currentRole);
+}
+
+// Bloquear acesso para não-gestores e não-logados
+if(!currentUser) { window.location.href = 'index.html'; }
+if(currentRole !== 'gestor') { window.location.href = 'app.html'; }
+
+document.getElementById('nav-user').textContent = currentUser;
+document.getElementById('sub-text').textContent = 'Logado como ' + currentUser + ' · Perfil: ' + currentRole;
+
+// ─── Supabase (para relatório) ───
+const SB_URL  = (window.APP_CONFIG||{}).SB_URL;
+const SB_KEY  = (window.APP_CONFIG||{}).SB_KEY;
+const TABLE   = 'lancamentos';
+
+async function sb(path, opts) {
+  var res = await fetch(SB_URL + '/rest/v1/' + path, Object.assign({
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
+  }, opts || {}));
+  if(!res.ok) throw new Error(await res.text());
+  var ct = res.headers.get('content-type') || '';
+  if(ct.includes('json')) return res.json();
+  return null;
+}
+
+// ─── STORAGE DE USUÁRIOS ───
+// Permissões disponíveis para funcionários (gestores têm tudo automaticamente)
+var PERMS_DEF = {
+  conciliacao:  { label: 'Conciliação',   desc: 'Aba de conciliação bancária' },
+  endividamento:{ label: 'Endividamento', desc: 'Dashboard de endividamento' },
+  excluir:      { label: 'Excluir reg.', desc: 'Excluir lançamentos' },
+  exportar:     { label: 'Exportar XLS', desc: 'Download de planilha Excel' },
+  configuracoes:{ label: 'Configurações', desc: 'Acessar esta página' },
+  receitas_bloqueado:{ label: 'Bloquear Receitas', desc: 'Receitas é liberada por padrão; marque para BLOQUEAR este usuário', inverso: true },
+  relatorios_bloqueado:{ label: 'Bloquear Relatórios', desc: 'Relatórios é liberado por padrão; marque para BLOQUEAR este usuário', inverso: true }
+};
+
+var SENHAS_DEF = {admin:'trocar123'};
+var ROLES_DEF  = {admin:'gestor'};
+
+function getUsers() {
+  var stored = localStorage.getItem('gf_users_v2');
+  var base = {};
+
+  if(stored) {
+    try { base = JSON.parse(stored); } catch(e) { base = {}; }
+  }
+
+  // Construir objeto normalizado — garante que TODOS os 8 usuários existem
+  // e que cada um tem os campos obrigatórios (login, nome, senha, role, perms)
+  var result = {};
+  USERS_BASE.forEach(function(login) {
+    var saved = base[login] || {};
+    // Suporta formato antigo {senha, role} e novo {login, nome, senha, role, perms}
+    result[login] = {
+      login : login,
+      nome  : saved.nome  || (login.charAt(0).toUpperCase() + login.slice(1)),
+      senha : saved.senha || SENHAS_DEF[login] || 'trocar123',
+      role  : saved.role  || ROLES_DEF[login]  || 'funcionario',
+      ativo : saved.ativo !== false,
+      perms : saved.perms || {}
+    };
+  });
+
+  // Salvar versão normalizada
+  localStorage.setItem('gf_users_v2', JSON.stringify(result));
+  return result;
+}
+
+function saveUsers(users) {
+  localStorage.setItem('gf_users_v2', JSON.stringify(users));
+  // Também atualizar o gf_roles global para index.html
+  var roles = {};
+  Object.values(users).forEach(function(u){ roles[u.login] = u.role; });
+  localStorage.setItem('gf_roles', JSON.stringify(roles));
+}
+
+var USERS = getUsers();
+
+// ─── TOAST ───
+function toast(msg, err) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (err ? ' err' : '');
+  setTimeout(function(){ t.className = 'toast'; }, 3000);
+}
+
+// ─── MODALS ───
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ─── TAB NAVIGATION ───
+function showTab(name) {
+  document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if(name === 'relatorio') carregarRelatorio();
+}
+
+// ═══════════════════════════════════════════════════
+// TAB USUÁRIOS
+// ═══════════════════════════════════════════════════
+function renderUsuarios() {
+  var grid = document.getElementById('user-grid');
+  if(!grid) return;
+  // Normalizar usuários antes de renderizar
+  var users = Object.values(USERS).map(function(u) {
+    return {
+      login : u.login || '?',
+      nome  : u.nome  || (u.login ? u.login.charAt(0).toUpperCase()+u.login.slice(1) : 'Usuário'),
+      role  : u.role  || 'funcionario',
+      perms : u.perms || {}
+    };
+  });
+  document.getElementById('total-users').textContent = users.length + ' usuário(s)';
+  if(!users.length) { grid.innerHTML = '<p style="color:var(--cinza);padding:8px;">Nenhum usuário.</p>'; return; }
+  grid.innerHTML = users.map(function(u) {
+    return '<div class="user-card">' +
+      '<div class="user-card-head">' +
+        '<div class="avatar">' + u.nome.charAt(0).toUpperCase() + '</div>' +
+        '<div><div class="user-name">' + u.nome + '</div>' +
+        '<div class="user-login">' + u.login + ' · <span class="badge ' + u.role + '">' + (u.role === 'gestor' ? '◈ Gestor' : '◦ Funcionário') + '</span></div></div>' +
+      '</div>' +
+      '<div class="user-actions">' +
+        '<select class="role-select" onchange="alterarRole(\'' + u.login + '\',this.value)">' +
+          '<option value="gestor"' + (u.role==='gestor'?' selected':'') + '>◈ Gestor</option>' +
+          '<option value="funcionario"' + (u.role==='funcionario'?' selected':'') + '>◦ Funcionário</option>' +
+        '</select>' +
+        '<button class="btn btn-sm btn-ghost" onclick="abrirModalSenha(\'' + u.login + '\')">🔑 Senha</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function alterarRole(login, novoRole) {
+  if(login === currentLogin && novoRole !== 'gestor') {
+    toast('Você não pode remover seu próprio acesso de gestor', true);
+    renderUsuarios(); return;
+  }
+  USERS[login].role = novoRole;
+  saveUsers(USERS);
+  toast('✓ Perfil de ' + USERS[login].nome + ' alterado para ' + novoRole);
+  renderUsuarios();
+  renderAccessTable();
+}
+
+// ═══════════════════════════════════════════════════
+// TAB SENHAS
+// ═══════════════════════════════════════════════════
+function renderSenhaSelects() {
+  var sel = document.getElementById('senha-user');
+  var users = Object.values(USERS);
+  // Gestores veem todos; funcionários só veem a si mesmos
+  var visibles = currentRole === 'gestor' ? users : users.filter(function(u){ return u.login === currentLogin; });
+  sel.innerHTML = visibles.map(function(u){
+    return '<option value="' + u.login + '">' + u.nome + ' (' + u.login + ')</option>';
+  }).join('');
+}
+
+function abrirModalSenha(login) {
+  // Atalho: focar na aba senhas e pré-selecionar usuário
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.tab')[1].classList.add('active');
+  document.getElementById('tab-senhas').classList.add('active');
+  document.getElementById('senha-user').value = login;
+  document.getElementById('senha-nova').focus();
+}
+
+function alterarSenha() {
+  var login = document.getElementById('senha-user').value;
+  var nova  = document.getElementById('senha-nova').value;
+  var conf  = document.getElementById('senha-conf').value;
+  if(!nova || nova.length < 4) { toast('Senha deve ter ao menos 4 caracteres', true); return; }
+  if(nova !== conf) { toast('Senhas não conferem', true); return; }
+  if(currentRole !== 'gestor' && login !== currentLogin) { toast('Sem permissão', true); return; }
+  USERS[login].senha = nova;
+  saveUsers(USERS);
+  document.getElementById('senha-nova').value = '';
+  document.getElementById('senha-conf').value = '';
+  toast('✓ Senha de ' + USERS[login].nome + ' alterada com sucesso!');
+}
+
+function alterarMinhaSenha() {
+  var atual = document.getElementById('minha-atual').value;
+  var nova  = document.getElementById('minha-nova').value;
+  var conf  = document.getElementById('minha-conf').value;
+  if(!USERS[currentLogin]) { toast('Usuário não encontrado', true); return; }
+  if(atual !== USERS[currentLogin].senha) { toast('Senha atual incorreta', true); return; }
+  if(!nova || nova.length < 4) { toast('Nova senha muito curta', true); return; }
+  if(nova !== conf) { toast('Senhas não conferem', true); return; }
+  USERS[currentLogin].senha = nova;
+  saveUsers(USERS);
+  document.getElementById('minha-atual').value = '';
+  document.getElementById('minha-nova').value = '';
+  document.getElementById('minha-conf').value = '';
+  toast('✓ Sua senha foi alterada com sucesso!');
+}
+
+// ═══════════════════════════════════════════════════
+// TAB ACESSOS — permissões individuais por usuário
+// ═══════════════════════════════════════════════════
+
+// Permissões disponíveis (chave → label)
+
+function renderPermTable() {
+  var tbody = document.getElementById('perm-tbody');
+  var permKeys = Object.keys(PERMS_DEF);
+  tbody.innerHTML = Object.values(USERS).map(function(u) {
+    var isGestor = u.role === 'gestor';
+    var isMe = u.login === currentLogin;
+
+    var roleCell = '<td style="text-align:center">' +
+      (isMe
+        ? '<span class="badge ' + u.role + '">' + (isGestor?'◈ Gestor':'◦ Func.') + '</span>'
+        : '<select class="role-select" onchange="alterarRole(\'' + u.login + '\',this.value)">' +
+            '<option value="gestor"' + (isGestor?' selected':'') + '>◈ Gestor</option>' +
+            '<option value="funcionario"' + (!isGestor?' selected':'') + '>◦ Func.</option>' +
+          '</select>') +
+      '</td>';
+
+    var permCells = permKeys.map(function(pk) {
+      var inverso = PERMS_DEF[pk] && PERMS_DEF[pk].inverso;
+      var tdStyle = 'text-align:center;' + (inverso ? 'border-left:3px solid var(--ouro);' : '');
+
+      // Gestor: tem tudo. Em coluna normal aparece "auto"; na inversa, "livre".
+      if(isGestor) {
+        var txtG = inverso ? '— livre —' : '✓ auto';
+        return '<td style="' + tdStyle + '">' +
+          '<span style="display:inline-block;font-family:DM Mono,monospace;font-size:10px;font-weight:700;color:#9aa;letter-spacing:.05em;padding:5px 0;">' + txtG + '</span>' +
+        '</td>';
+      }
+
+      // Estado atual e semântica:
+      // - normal:  perms[pk]===true  => LIBERADO
+      // - inversa: perms[pk]===true  => BLOQUEADO
+      var marcado = !!(u.perms && u.perms[pk]);
+      var liberado = inverso ? !marcado : marcado;
+      var corBg    = liberado ? '#e7f6ec' : '#fde8e8';
+      var corBorda = liberado ? '#16a34a' : '#dc2626';
+      var corTxt   = liberado ? '#15803d' : '#b91c1c';
+      var rotulo   = liberado ? '✓ Liberado' : '🚫 Bloqueado';
+      // valor que será gravado ao clicar (inverte o estado atual):
+      // - normal:  clicar => grava o oposto de 'marcado'
+      // - inversa: clicar => grava o oposto de 'marcado' também (a semântica já está no marcado)
+      var proximo = marcado ? 'false' : 'true';
+      return '<td style="' + tdStyle + '">' +
+        '<button onclick="togglePerm(\'' + u.login + '\',\'' + pk + '\',' + proximo + ')" ' +
+          'style="font-family:DM Mono,monospace;font-size:10px;font-weight:700;padding:5px 9px;border-radius:7px;cursor:pointer;' +
+          'background:' + corBg + ';border:1.5px solid ' + corBorda + ';color:' + corTxt + ';letter-spacing:.02em;white-space:nowrap;">' +
+          rotulo +
+        '</button>' +
+      '</td>';
+    }).join('');
+
+    return '<tr>' +
+      '<td><strong>' + u.nome + '</strong><br><span style="font-size:11px;color:var(--cinza);font-family:DM Mono,monospace;">' + u.login + '</span></td>' +
+      roleCell + permCells +
+    '</tr>';
+  }).join('');
+}
+
+function togglePerm(login, perm, valor) {
+  if(!USERS[login].perms) USERS[login].perms = {};
+  USERS[login].perms[perm] = valor;
+  saveUsers(USERS);
+  var def = PERMS_DEF[perm] || {};
+  var lbl = def.label || perm;
+  var nome = USERS[login].nome;
+  if(def.inverso) {
+    // Coluna inversa (Receitas): valor true = BLOQUEADO
+    toast(valor ? '🚫 ' + lbl + ' bloqueada para ' + nome
+                : '✓ ' + lbl + ' liberada para ' + nome);
+  } else {
+    toast(valor ? '✓ "' + lbl + '" liberada para ' + nome
+                : '🚫 "' + lbl + '" bloqueada para ' + nome);
+  }
+  // IMPORTANTE: redesenhar a tabela para o botão refletir o novo estado
+  renderPermTable();
+}
+
+// compatibilidade com chamadas antigas
+function renderAccessTable() { renderPermTable(); }
+
+// ═══════════════════════════════════════════════════
+// TAB RELATÓRIO
+// ═══════════════════════════════════════════════════
+var relData = [];
+
+async function carregarRelatorio() {
+  document.getElementById('rel-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--cinza);">Carregando…</td></tr>';
+  try {
+    // Buscar todos os lançamentos com paginação (Supabase retorna 1000 por default)
+    var data = [];
+    var offset = 0;
+    var pageSize = 1000;
+    while(true) {
+      var page = await sb(TABLE + '?select=lancador,status,valor,vencimento&order=vencimento.desc&limit=' + pageSize + '&offset=' + offset, {});
+      data = data.concat(page);
+      if(page.length < pageSize) break;
+      offset += pageSize;
+    }
+    relData = data || [];
+    renderRelatorio();
+  } catch(e) {
+    toast('Erro ao carregar: ' + e.message, true);
+  }
+}
+
+function renderRelatorio() {
+  var grupos = {};
+  relData.forEach(function(l) {
+    var user = (l.lancador || 'Desconhecido').trim().toUpperCase();
+    if(!grupos[user]) grupos[user] = { total:0, apagar:0, pago:0, valor:0, ultimo:'' };
+    grupos[user].total++;
+    if(l.status === 'A PAGAR') grupos[user].apagar++;
+    if(l.status === 'PAGO')    grupos[user].pago++;
+    grupos[user].valor += parseFloat(l.valor) || 0;
+    if(!grupos[user].ultimo || l.vencimento > grupos[user].ultimo) grupos[user].ultimo = l.vencimento || '';
+  });
+
+  var lista = Object.entries(grupos).sort(function(a,b){ return b[1].total - a[1].total; });
+  var maxTotal = lista.length ? lista[0][1].total : 1;
+
+  var totalReg    = relData.length;
+  var totalVal    = relData.reduce(function(s,l){ return s + (parseFloat(l.valor)||0); }, 0);
+  var totalApagar = relData.filter(function(l){ return l.status === 'A PAGAR'; }).length;
+  var totalPago   = relData.filter(function(l){ return l.status === 'PAGO'; }).length;
+
+  document.getElementById('rel-stats').innerHTML =
+    box('Total de registros', totalReg, '') +
+    box('Valor total', 'R$ ' + totalVal.toLocaleString('pt-BR',{minimumFractionDigits:2}), '') +
+    box('A pagar', totalApagar, totalReg ? Math.round(totalApagar/totalReg*100) + '%' : '') +
+    box('Pago', totalPago, totalReg ? Math.round(totalPago/totalReg*100) + '%' : '');
+
+  document.getElementById('rel-bars').innerHTML = lista.map(function(e) {
+    var pct = Math.round(e[1].total / maxTotal * 100);
+    return '<div class="bar-row">' +
+      '<div class="bar-user">' + e[0] + '</div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%">' + e[1].total + '</div></div>' +
+      '<div class="bar-total">' + e[1].total + '</div>' +
+    '</div>';
+  }).join('');
+
+  var fmt = new Intl.DateTimeFormat('pt-BR');
+  document.getElementById('rel-tbody').innerHTML = lista.map(function(e) {
+    var u = e[0], d = e[1];
+    var dt = d.ultimo ? fmt.format(new Date(d.ultimo + 'T12:00:00')) : '—';
+    return '<tr>' +
+      '<td><strong>' + u + '</strong></td>' +
+      '<td class="mono" style="text-align:right">' + d.total + '</td>' +
+      '<td class="mono" style="text-align:right;color:#c0392b">' + d.apagar + '</td>' +
+      '<td class="mono" style="text-align:right;color:#1a7a3d">' + d.pago + '</td>' +
+      '<td class="mono" style="text-align:right">R$ ' + d.valor.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</td>' +
+      '<td class="mono">' + dt + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function box(label, val, sub) {
+  return '<div class="stat-box"><div class="stat-label">' + label + '</div>' +
+    '<div class="stat-value">' + val + '</div>' +
+    (sub ? '<div class="stat-sub">' + sub + '</div>' : '') + '</div>';
+}
+
+function exportarRelatorio() {
+  if(!relData.length) { toast('Nenhum dado para exportar', true); return; }
+  var grupos = {};
+  relData.forEach(function(l) {
+    var user = (l.lancador || 'Desconhecido').trim().toUpperCase();
+    if(!grupos[user]) grupos[user] = { total:0, apagar:0, pago:0, valor:0, ultimo:'' };
+    grupos[user].total++;
+    if(l.status === 'A PAGAR') grupos[user].apagar++;
+    if(l.status === 'PAGO')    grupos[user].pago++;
+    grupos[user].valor += parseFloat(l.valor) || 0;
+    if(!grupos[user].ultimo || l.vencimento > grupos[user].ultimo) grupos[user].ultimo = l.vencimento || '';
+  });
+  var csv = 'Usuário,Total,A Pagar,Pago,Valor Total,Último Lançamento\n';
+  Object.entries(grupos).sort(function(a,b){return b[1].total-a[1].total;}).forEach(function(e) {
+    var d = e[1];
+    csv += [e[0], d.total, d.apagar, d.pago, d.valor.toFixed(2).replace('.',','), d.ultimo].join(',') + '\n';
+  });
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'relatorio_lancamentos_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ─── SAIR ───
+function sair() {
+  sessionStorage.removeItem('gf_user');
+  sessionStorage.removeItem('gf_role');
+  window.location.href = 'index.html';
+}
+
+// ─── INIT ───
+try { renderUsuarios(); } catch(e) { console.error('renderUsuarios:', e); }
+try { renderSenhaSelects(); } catch(e) { console.error('renderSenhaSelects:', e); }
+try { renderPermTable(); } catch(e) { console.error('renderPermTable:', e); }
+</script>
+</body>
+</html>

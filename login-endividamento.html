@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Santa Rita — Endividamento</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --verde:#1a3a2a;--verde-mid:#2d5c3f;--verde-light:#4a8c5c;
+  --ouro:#c8a84b;--ouro-light:#e8c96a;
+  --creme:#f5f0e8;--creme-dark:#e8e0d0;--branco:#fafaf7;
+  --cinza:#8a8a7a;--cinza-light:#d4d0c8;--texto:#1a1a14;
+  --erro:#c0392b;--sucesso:#27ae60;
+}
+body{
+  font-family:'DM Sans',sans-serif;
+  min-height:100vh;
+  background:var(--creme);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.bg-pattern{
+  position:fixed;inset:0;pointer-events:none;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(26,58,42,0.06) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(200,168,75,0.08) 0%, transparent 50%);
+}
+.bg-lines{
+  position:fixed;inset:0;pointer-events:none;
+  background-image:repeating-linear-gradient(
+    90deg,transparent,transparent 79px,
+    rgba(26,58,42,0.03) 79px,rgba(26,58,42,0.03) 80px
+  );
+}
+.card{
+  background:var(--branco);
+  border-radius:20px;
+  width:420px;max-width:calc(100vw - 32px);
+  box-shadow:0 12px 60px rgba(26,58,42,0.16);
+  overflow:hidden;position:relative;z-index:1;
+}
+.card-top{
+  background:var(--verde);
+  padding:36px 44px 32px;
+  text-align:center;
+}
+.marca{
+  font-family:'Syne',sans-serif;
+  font-weight:800;font-size:22px;
+  color:var(--ouro);letter-spacing:0.06em;
+}
+.marca span{display:block;color:rgba(245,240,232,0.5);font-weight:400;font-size:11px;letter-spacing:0.14em;margin-top:4px;text-transform:uppercase;}
+.lock-icon{
+  width:48px;height:48px;border-radius:50%;
+  background:rgba(200,168,75,0.15);
+  border:1.5px solid rgba(200,168,75,0.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;margin:18px auto 0;
+}
+.card-body{padding:36px 44px 40px;}
+.field{margin-bottom:18px;}
+label{
+  display:block;
+  font-family:'DM Mono',monospace;
+  font-size:10px;font-weight:500;
+  letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--cinza);margin-bottom:7px;
+}
+input{
+  width:100%;padding:12px 16px;
+  border:1.5px solid var(--creme-dark);
+  border-radius:8px;
+  font-family:'DM Sans',sans-serif;font-size:15px;
+  color:var(--texto);background:var(--branco);
+  transition:border-color 0.2s,box-shadow 0.2s;outline:none;
+}
+input:focus{border-color:var(--verde-light);box-shadow:0 0 0 3px rgba(74,140,92,0.12);}
+.btn{
+  width:100%;padding:14px;
+  background:var(--verde);color:var(--ouro);
+  border:none;border-radius:8px;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+  letter-spacing:0.04em;cursor:pointer;
+  transition:all 0.2s;margin-top:4px;
+}
+.btn:hover{background:var(--verde-mid);transform:translateY(-1px);box-shadow:0 4px 16px rgba(26,58,42,0.2);}
+.btn:active{transform:translateY(0);}
+.err{
+  font-family:'DM Mono',monospace;font-size:11px;
+  color:var(--erro);text-align:center;
+  min-height:18px;margin-top:12px;letter-spacing:0.04em;
+}
+.footer{
+  text-align:center;
+  font-family:'DM Mono',monospace;font-size:10px;
+  color:var(--cinza-light);letter-spacing:0.08em;
+  margin-top:24px;
+}
+.role-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(200,168,75,0.1);
+  border:1px solid rgba(200,168,75,0.25);
+  border-radius:20px;padding:4px 12px;
+  font-family:'DM Mono',monospace;font-size:10px;
+  color:var(--ouro);letter-spacing:0.06em;
+  margin:0 auto 0;
+}
+</style>
+</head>
+<body>
+<div class="bg-pattern"></div>
+<div class="bg-lines"></div>
+<div class="card">
+  <div class="card-top">
+    <div class="marca"><img src="icons/logo-branco.png" alt="Fazenda Santa Rita" style="height:96px;width:auto;display:block;margin:0 auto 10px;"><span>Sistema de Endividamento</span></div>
+    <div class="lock-icon">🔐</div>
+  </div>
+  <div class="card-body">
+    <div class="field">
+      <label>Usuário</label>
+      <input type="text" id="u" placeholder="seu.usuario" autocomplete="username"
+        onkeydown="if(event.key==='Enter')document.getElementById('p').focus()">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="p" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <button class="btn" onclick="login()">Entrar</button>
+    <div class="err" id="err"></div>
+    <div class="footer">Fazenda Santa Rita &copy; 2026 — Acesso Restrito</div>
+  </div>
+</div>
+<script>
+// USUÁRIOS: { usuario: { senha, role: 'gestor'|'funcionario', nome } }
+var USERS = {
+  'admin': { senha:'trocar123', role:'gestor', nome:'Administrador' }
+};
+
+function login() {
+  var u = (document.getElementById('u').value||'').trim().toLowerCase();
+  var p = document.getElementById('p').value||'';
+  var user = USERS[u];
+  if(user && user.senha === p) {
+    sessionStorage.setItem('gf_user', user.nome);
+    sessionStorage.setItem('gf_role', user.role);
+    window.location.href = 'app-endividamento.html';
+  } else {
+    var err = document.getElementById('err');
+    err.textContent = '⚠ Usuário ou senha incorretos';
+    document.getElementById('p').value = '';
+    document.getElementById('p').focus();
+    setTimeout(function(){err.textContent='';}, 3000);
+  }
+}
+
+if(sessionStorage.getItem('gf_user')) window.location.href = 'app-endividamento.html';
+document.getElementById('u').focus();
+</script>
+</body>
+</html>
