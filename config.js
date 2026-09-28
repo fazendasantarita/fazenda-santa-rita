@@ -5,8 +5,8 @@
 // ============================================================
 window.APP_CONFIG = {
   // ── 1) SUPABASE (Project Settings → API) ─────────────────
-  SB_URL: 'https://SEU-PROJETO.supabase.co',   // Project URL
-  SB_KEY: 'COLE_AQUI_A_CHAVE_ANON',            // chave "anon / public"
+  SB_URL: 'https://vjpuzocomhwehdbaaqcm.supabase.co',   // Project URL
+  SB_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqcHV6b2NvbWh3ZWhkYmFhcWNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1ODA3MzksImV4cCI6MjEwNjE1NjczOX0.bh9UursozjRhqAugI1sr8Zt3vNcYVj5kn2tRokC_Wtg',            // chave "anon / public"
 
   CLIENTE_NOME: 'Fazenda Santa Rita',
 

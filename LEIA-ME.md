@@ -20,7 +20,7 @@ relatórios e configurações. PWA hospedado no GitHub Pages, banco no Supabase.
 - Repositório com o nome **`fazenda-santa-rita`** (o PWA já está configurado
   para esse caminho em `sw.js` e `manifest.json`; se usar outro nome, troque
   `/fazenda-santa-rita/` nesses dois arquivos).
-- Add file → Upload files → arraste todo o conteúdo (incluindo a pasta `icons/`).
+- Add file → Upload files → arraste todo o conteúdo (incluindo as imagens .png).
 - Settings → Pages → Deploy from a branch → `main` / `(root)`.
 - Endereço: `https://SEU-USUARIO.github.io/fazenda-santa-rita/`
 
