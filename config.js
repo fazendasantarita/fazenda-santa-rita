@@ -15,22 +15,30 @@ window.APP_CONFIG = {
 
   // Fazendas + cidade (a cidade vai no rodapé do recibo: "Cidade, data.")
   FAZENDAS: [
-    // { nome: 'FAZENDA SANTA RITA', cidade: 'Cidade - GO' },
+    { nome: 'FAZENDA SANTA RITA', cidade: 'Edealina - GO' },
   ],
 
   // Contas bancárias (usadas na baixa, conciliação e receitas)
   CONTAS: [
-    // 'BB 12345-6',
+    'BB MARIO',
+    'SICOOB MARIO',
   ],
 
   // Quem solicita as despesas
   SOLICITANTES: [
-    // 'FULANO',
+    'JOSE ADRIANO',
+    'JULIANA',
+    'MARCOS AURELIO',
+    'MARIO',
   ],
 
   // Titulares dos contratos de endividamento
   TITULARES: [
-    // 'Fulano',
+    'JOSE ADRIANO',
+    'JULIANA',
+    'MARCOS AURELIO',
+    'MARIO',
+    'VANDERLEIA',
   ],
 };
 // Se SB_URL/SB_KEY não forem preenchidos, os módulos NÃO conectam (falha segura).
