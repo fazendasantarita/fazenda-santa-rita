@@ -1,5 +1,5 @@
 // Service Worker — Fazenda Santa Rita PWA
-const CACHE_NAME = 'santa-rita-v3';
+const CACHE_NAME = 'santa-rita-v4';
 const BASE = '/fazenda-santa-rita/';
 
 // Arquivos essenciais para cache (shell do app)

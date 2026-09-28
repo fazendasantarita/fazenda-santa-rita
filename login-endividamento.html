@@ -135,25 +135,23 @@ input:focus{border-color:var(--verde-light);box-shadow:0 0 0 3px rgba(74,140,92,
   </div>
 </div>
 <script>
-// Usuários vêm do config.js (APP_CONFIG.USUARIOS) + senhas trocadas em localStorage ('gf_users_v2')
-var DEF = (window.APP_CONFIG && window.APP_CONFIG.USUARIOS) || {};
-function lerUsers(){ try { return JSON.parse(localStorage.getItem('gf_users_v2')||'{}')||{}; } catch(e){ return {}; } }
-
+// Login validado no Supabase (função app_login), mesma base da tela principal.
 function login() {
   var u = (document.getElementById('u').value||'').trim().toLowerCase();
   var p = document.getElementById('p').value||'';
-  var st = lerUsers()[u], def = DEF[u];
-  var senha = (st && st.senha) || (def && def.senha);
-  var role  = (st && st.role)  || (def && def.perfil) || 'funcionario';
-  var err = document.getElementById('err');
-  function falha(msg){ err.textContent = '⚠ ' + msg; document.getElementById('p').value=''; document.getElementById('p').focus(); setTimeout(function(){err.textContent='';}, 3500); }
-  if(!senha || p !== senha || (st && st.ativo === false)) return falha('Usuário ou senha incorretos');
-  if(def && p === def.senha) return falha('Primeiro acesso: entre pela tela principal para criar sua senha');
-  var liberado = role === 'gestor' || (st && st.perms && st.perms.endividamento === true);
-  if(!liberado) return falha('Sem acesso ao Endividamento');
-  sessionStorage.setItem('gf_user', u.charAt(0).toUpperCase() + u.slice(1));
-  sessionStorage.setItem('gf_role', role);
-  window.location.href = 'app-endividamento.html';
+  var err = document.getElementById('err'), btn = document.querySelector('.btn');
+  function falha(msg){ err.textContent = '⚠ ' + msg; document.getElementById('p').value=''; document.getElementById('p').focus(); setTimeout(function(){err.textContent='';}, 4000); }
+  if(!u || !p) return falha('Informe usuário e senha');
+  btn.disabled = true; btn.textContent = 'Entrando…';
+  APP_RPC('app_login', { p_login:u, p_senha:p }).then(function(res){
+    btn.disabled = false; btn.textContent = 'Entrar';
+    if(!res.ok) return falha(res.erro);
+    if(res.usuario.trocar_senha) return falha('Primeiro acesso: entre pela tela principal para criar sua senha');
+    var liberado = res.usuario.perfil === 'gestor' || (res.usuario.perms && res.usuario.perms.endividamento === true);
+    if(!liberado) return falha('Sem acesso ao Endividamento');
+    APP_ENTRAR(res);
+    window.location.href = 'app-endividamento.html';
+  });
 }
 
 if(sessionStorage.getItem('gf_user')) window.location.href = 'app-endividamento.html';

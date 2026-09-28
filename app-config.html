@@ -189,7 +189,19 @@ input.inp:focus,select.inp:focus{border-color:var(--verde);}
         <span id="total-users" style="font-size:12px;color:var(--cinza);font-family:DM Mono,monospace;"></span>
       </div>
       <div class="card-body">
-        <div class="user-grid" id="user-grid"></div>
+        <div class="user-grid" id="user-grid"><p style="color:var(--cinza);padding:8px;">Carregando…</p></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Novo usuário</h3></div>
+      <div class="card-body">
+        <div class="field-row">
+          <div class="field"><label class="lbl">Login</label><input class="inp" id="nu-login" placeholder="ex.: maria" autocapitalize="off"></div>
+          <div class="field" style="flex:2"><label class="lbl">Nome completo</label><input class="inp" id="nu-nome" placeholder="Maria da Silva"></div>
+          <div class="field"><label class="lbl">Senha provisória</label><input class="inp" type="password" id="nu-senha" placeholder="mín. 5 caracteres"></div>
+          <div class="field"><label class="lbl">Perfil</label><select class="inp" id="nu-perfil"><option value="funcionario">◦ Funcionário</option><option value="gestor">◈ Gestor</option></select></div>
+        </div>
+        <button class="btn btn-primary" onclick="criarUsuario()">＋ Criar usuário</button>
       </div>
     </div>
   </div>
@@ -199,22 +211,22 @@ input.inp:focus,select.inp:focus{border-color:var(--verde);}
     <div class="card">
       <div class="card-head"><h3>Alterar senha</h3></div>
       <div class="card-body">
-        <p style="font-size:13px;color:var(--cinza);margin-bottom:20px;">Gestores podem alterar a senha de qualquer usuário. Funcionários só podem alterar a própria senha.</p>
+        <p style="font-size:13px;color:var(--cinza);margin-bottom:20px;">O gestor define uma <b>senha provisória</b>; no próximo acesso a pessoa é obrigada a criar a própria. Senhas valem em todos os computadores e celulares.</p>
         <div class="field-row">
           <div class="field">
             <label class="lbl">Usuário</label>
             <select class="inp" id="senha-user"></select>
           </div>
           <div class="field">
-            <label class="lbl">Nova senha</label>
-            <input class="inp" type="password" id="senha-nova" placeholder="Nova senha" minlength="6">
+            <label class="lbl">Senha provisória</label>
+            <input class="inp" type="password" id="senha-nova" placeholder="mín. 5 caracteres">
           </div>
           <div class="field">
             <label class="lbl">Confirmar</label>
             <input class="inp" type="password" id="senha-conf" placeholder="Confirmar senha">
           </div>
         </div>
-        <button class="btn btn-primary" onclick="alterarSenha()">🔑 Salvar nova senha</button>
+        <button class="btn btn-primary" onclick="alterarSenha()">🔑 Definir senha provisória</button>
       </div>
     </div>
 
@@ -341,27 +353,16 @@ input.inp:focus,select.inp:focus{border-color:var(--verde);}
 // para persistir entre sessões sem backend extra
 // ═══════════════════════════════════════════════════
 
-// Usuários base (sem roles, para manter compatibilidade com index.html)
-// Roles e senhas são gerenciadas aqui via localStorage
-var _UDEF = (window.APP_CONFIG && window.APP_CONFIG.USUARIOS) || {admin:{nome:'Administrador',senha:'trocar123',perfil:'gestor'}};
-var USERS_BASE = Object.keys(_UDEF);
-
+// Usuários, senhas e permissões ficam no Supabase (usuarios.sql).
+// Esta página só fala com o banco pelas funções app_* usando o token da sessão.
+var TOKEN = sessionStorage.getItem('gf_token') || '';
 var currentUser = sessionStorage.getItem('gf_user') || '';
 var currentLogin = currentUser.toLowerCase();
+var currentRole = sessionStorage.getItem('gf_role') || 'funcionario';
 
-// Se não tiver role salvo (index.html antigo), inferir pelo login
-var GESTORES_DEFAULT = USERS_BASE.filter(function(k){ return _UDEF[k].perfil === 'gestor'; });
-var currentRole = sessionStorage.getItem('gf_role') ||
-  (GESTORES_DEFAULT.indexOf(currentLogin) >= 0 ? 'gestor' : 'funcionario');
-
-// Salvar role inferido para uso posterior
-if(!sessionStorage.getItem('gf_role') && currentRole) {
-  sessionStorage.setItem('gf_role', currentRole);
-}
-
-// Bloquear acesso para não-gestores e não-logados
-if(!currentUser) { window.location.href = 'index.html'; }
-if(currentRole !== 'gestor') { window.location.href = 'app.html'; }
+// Bloquear acesso para não-logados (ou sessão sem token) e não-gestores
+if(!currentUser || !TOKEN) { sessionStorage.clear(); window.location.href = 'index.html'; }
+else if(currentRole !== 'gestor') { window.location.href = 'app.html'; }
 
 document.getElementById('nav-user').textContent = currentUser;
 document.getElementById('sub-text').textContent = 'Logado como ' + currentUser + ' · Perfil: ' + currentRole;
@@ -393,47 +394,45 @@ var PERMS_DEF = {
   relatorios_bloqueado:{ label: 'Bloquear Relatórios', desc: 'Relatórios é liberado por padrão; marque para BLOQUEAR este usuário', inverso: true }
 };
 
-var SENHAS_DEF = {}, ROLES_DEF = {}, NOMES_DEF = {};
-USERS_BASE.forEach(function(k){ SENHAS_DEF[k]=_UDEF[k].senha; ROLES_DEF[k]=_UDEF[k].perfil||'funcionario'; NOMES_DEF[k]=_UDEF[k].nome; });
+var USERS = {};
 
-function getUsers() {
-  var stored = localStorage.getItem('gf_users_v2');
-  var base = {};
+function sessaoExpirada() {
+  toast('Sessão expirada — entre novamente', true);
+  setTimeout(function(){ sessionStorage.clear(); window.location.href = 'index.html'; }, 1600);
+}
 
-  if(stored) {
-    try { base = JSON.parse(stored); } catch(e) { base = {}; }
-  }
-
-  // Construir objeto normalizado — garante que TODOS os 8 usuários existem
-  // e que cada um tem os campos obrigatórios (login, nome, senha, role, perms)
-  var result = {};
-  USERS_BASE.forEach(function(login) {
-    var saved = base[login] || {};
-    // Suporta formato antigo {senha, role} e novo {login, nome, senha, role, perms}
-    result[login] = {
-      login : login,
-      nome  : saved.nome  || NOMES_DEF[login] || (login.charAt(0).toUpperCase() + login.slice(1)),
-      senha : saved.senha || SENHAS_DEF[login] || 'trocar123',
-      role  : saved.role  || ROLES_DEF[login]  || 'funcionario',
-      ativo : saved.ativo !== false,
-      perms : saved.perms || {}
-    };
+function carregarUsuarios() {
+  return APP_RPC('app_listar_usuarios', { p_token: TOKEN }).then(function(res) {
+    if(!res.ok) { if(/Sessão/.test(res.erro)) sessaoExpirada(); else toast('⚠ ' + res.erro, true); return; }
+    USERS = {};
+    res.usuarios.forEach(function(u) {
+      USERS[u.login] = { login:u.login, nome:u.nome, role:u.perfil, ativo:u.ativo, perms:u.perms||{}, trocar_senha:u.trocar_senha };
+    });
+    try { renderUsuarios(); } catch(e) { console.error('renderUsuarios:', e); }
+    try { renderSenhaSelects(); } catch(e) { console.error('renderSenhaSelects:', e); }
+    try { renderPermTable(); } catch(e) { console.error('renderPermTable:', e); }
   });
-
-  // Salvar versão normalizada
-  localStorage.setItem('gf_users_v2', JSON.stringify(result));
-  return result;
 }
 
-function saveUsers(users) {
-  localStorage.setItem('gf_users_v2', JSON.stringify(users));
-  // Também atualizar o gf_roles global para index.html
-  var roles = {};
-  Object.values(users).forEach(function(u){ roles[u.login] = u.role; });
-  localStorage.setItem('gf_roles', JSON.stringify(roles));
+// Executa uma função de gestor no banco e recarrega a lista
+function rpcAdmin(fn, args, okMsg) {
+  return APP_RPC(fn, Object.assign({ p_token: TOKEN }, args)).then(function(res) {
+    if(!res.ok) { if(/Sessão/.test(res.erro)) return sessaoExpirada(); toast('⚠ ' + res.erro, true); }
+    else if(okMsg) toast(okMsg);
+    return carregarUsuarios().then(function(){ return res; });
+  });
 }
 
-var USERS = getUsers();
+function criarUsuario() {
+  var login = (document.getElementById('nu-login').value||'').trim().toLowerCase();
+  var nome  = (document.getElementById('nu-nome').value||'').trim();
+  var senha = document.getElementById('nu-senha').value||'';
+  var perfil= document.getElementById('nu-perfil').value;
+  rpcAdmin('app_admin_criar', { p_login:login, p_nome:nome, p_senha:senha, p_perfil:perfil },
+    '✓ Usuário ' + login + ' criado — vai criar a própria senha no 1º acesso').then(function(res){
+      if(res && res.ok) ['nu-login','nu-nome','nu-senha'].forEach(function(id){ document.getElementById(id).value=''; });
+    });
+}
 
 // ─── TOAST ───
 function toast(msg, err) {
@@ -467,7 +466,9 @@ function renderUsuarios() {
       login : u.login || '?',
       nome  : u.nome  || (u.login ? u.login.charAt(0).toUpperCase()+u.login.slice(1) : 'Usuário'),
       role  : u.role  || 'funcionario',
-      perms : u.perms || {}
+      perms : u.perms || {},
+      trocar_senha : !!u.trocar_senha,
+      ativo : u.ativo !== false
     };
   });
   document.getElementById('total-users').textContent = users.length + ' usuário(s)';
@@ -477,7 +478,9 @@ function renderUsuarios() {
       '<div class="user-card-head">' +
         '<div class="avatar">' + u.nome.charAt(0).toUpperCase() + '</div>' +
         '<div><div class="user-name">' + u.nome + '</div>' +
-        '<div class="user-login">' + u.login + ' · <span class="badge ' + u.role + '">' + (u.role === 'gestor' ? '◈ Gestor' : '◦ Funcionário') + '</span></div></div>' +
+        '<div class="user-login">' + u.login + ' · <span class="badge ' + u.role + '">' + (u.role === 'gestor' ? '◈ Gestor' : '◦ Funcionário') + '</span>' +
+        (u.trocar_senha ? ' <span class="badge inativo">1º acesso pendente</span>' : '') +
+        (!u.ativo ? ' <span class="badge inativo">desativado</span>' : '') + '</div></div>' +
       '</div>' +
       '<div class="user-actions">' +
         '<select class="role-select" onchange="alterarRole(\'' + u.login + '\',this.value)">' +
@@ -495,11 +498,8 @@ function alterarRole(login, novoRole) {
     toast('Você não pode remover seu próprio acesso de gestor', true);
     renderUsuarios(); return;
   }
-  USERS[login].role = novoRole;
-  saveUsers(USERS);
-  toast('✓ Perfil de ' + USERS[login].nome + ' alterado para ' + novoRole);
-  renderUsuarios();
-  renderAccessTable();
+  rpcAdmin('app_admin_atualizar', { p_login:login, p_perfil:novoRole },
+    '✓ Perfil de ' + USERS[login].nome + ' alterado para ' + novoRole);
 }
 
 // ═══════════════════════════════════════════════════
@@ -529,30 +529,28 @@ function alterarSenha() {
   var login = document.getElementById('senha-user').value;
   var nova  = document.getElementById('senha-nova').value;
   var conf  = document.getElementById('senha-conf').value;
-  if(!nova || nova.length < 4) { toast('Senha deve ter ao menos 4 caracteres', true); return; }
+  if(!nova || nova.length < 5) { toast('A senha provisória precisa ter ao menos 5 caracteres', true); return; }
   if(nova !== conf) { toast('Senhas não conferem', true); return; }
-  if(currentRole !== 'gestor' && login !== currentLogin) { toast('Sem permissão', true); return; }
-  USERS[login].senha = nova;
-  saveUsers(USERS);
-  document.getElementById('senha-nova').value = '';
-  document.getElementById('senha-conf').value = '';
-  toast('✓ Senha de ' + USERS[login].nome + ' alterada com sucesso!');
+  if(currentRole !== 'gestor') { toast('Sem permissão', true); return; }
+  rpcAdmin('app_admin_definir_senha', { p_login:login, p_nova:nova },
+    '✓ Senha provisória definida — ' + USERS[login].nome + ' vai criar a própria no próximo acesso').then(function(res){
+      if(res && res.ok) { document.getElementById('senha-nova').value = ''; document.getElementById('senha-conf').value = ''; }
+    });
 }
 
 function alterarMinhaSenha() {
   var atual = document.getElementById('minha-atual').value;
   var nova  = document.getElementById('minha-nova').value;
   var conf  = document.getElementById('minha-conf').value;
-  if(!USERS[currentLogin]) { toast('Usuário não encontrado', true); return; }
-  if(atual !== USERS[currentLogin].senha) { toast('Senha atual incorreta', true); return; }
-  if(!nova || nova.length < 4) { toast('Nova senha muito curta', true); return; }
+  if(!nova || nova.length < 6) { toast('A nova senha precisa ter ao menos 6 caracteres', true); return; }
   if(nova !== conf) { toast('Senhas não conferem', true); return; }
-  USERS[currentLogin].senha = nova;
-  saveUsers(USERS);
-  document.getElementById('minha-atual').value = '';
-  document.getElementById('minha-nova').value = '';
-  document.getElementById('minha-conf').value = '';
-  toast('✓ Sua senha foi alterada com sucesso!');
+  APP_RPC('app_trocar_senha', { p_login:currentLogin, p_atual:atual, p_nova:nova }).then(function(res){
+    if(!res.ok) { toast('⚠ ' + res.erro, true); return; }
+    document.getElementById('minha-atual').value = '';
+    document.getElementById('minha-nova').value = '';
+    document.getElementById('minha-conf').value = '';
+    toast('✓ Sua senha foi alterada — vale em todos os dispositivos');
+  });
 }
 
 // ═══════════════════════════════════════════════════
@@ -619,22 +617,15 @@ function renderPermTable() {
 }
 
 function togglePerm(login, perm, valor) {
-  if(!USERS[login].perms) USERS[login].perms = {};
-  USERS[login].perms[perm] = valor;
-  saveUsers(USERS);
+  var perms = Object.assign({}, USERS[login].perms || {});
+  perms[perm] = valor;
   var def = PERMS_DEF[perm] || {};
   var lbl = def.label || perm;
   var nome = USERS[login].nome;
-  if(def.inverso) {
-    // Coluna inversa (Receitas): valor true = BLOQUEADO
-    toast(valor ? '🚫 ' + lbl + ' bloqueada para ' + nome
-                : '✓ ' + lbl + ' liberada para ' + nome);
-  } else {
-    toast(valor ? '✓ "' + lbl + '" liberada para ' + nome
-                : '🚫 "' + lbl + '" bloqueada para ' + nome);
-  }
-  // IMPORTANTE: redesenhar a tabela para o botão refletir o novo estado
-  renderPermTable();
+  var msg = def.inverso
+    ? (valor ? '🚫 ' + lbl + ' bloqueada para ' + nome : '✓ ' + lbl + ' liberada para ' + nome)
+    : (valor ? '✓ "' + lbl + '" liberada para ' + nome : '🚫 "' + lbl + '" bloqueada para ' + nome);
+  rpcAdmin('app_admin_atualizar', { p_login:login, p_perms:perms }, msg + ' (vale no próximo login)');
 }
 
 // compatibilidade com chamadas antigas
@@ -752,9 +743,7 @@ function sair() {
 }
 
 // ─── INIT ───
-try { renderUsuarios(); } catch(e) { console.error('renderUsuarios:', e); }
-try { renderSenhaSelects(); } catch(e) { console.error('renderSenhaSelects:', e); }
-try { renderPermTable(); } catch(e) { console.error('renderPermTable:', e); }
+if(TOKEN && currentRole === 'gestor') carregarUsuarios();
 </script>
 </body>
 </html>

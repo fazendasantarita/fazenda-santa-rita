@@ -96,7 +96,7 @@
       <button class="btn" onclick="login()">Entrar</button>
     </div>
     <div id="box-troca" style="display:none;">
-      <div class="aviso">Primeiro acesso de <b id="troca-nome"></b>.<br>Crie uma senha pessoal para continuar.</div>
+      <div class="aviso">Primeiro acesso de <b id="troca-nome"></b>.<br>Crie uma senha pessoal — ela vale em qualquer computador ou celular.</div>
       <label class="label" for="n1">Nova senha</label>
       <input class="inp" type="password" id="n1" placeholder="mínimo 6 caracteres" autocomplete="new-password"
         onkeydown="if(event.key==='Enter')document.getElementById('n2').focus()">
@@ -109,71 +109,58 @@
     <div class="footer">Fazenda Santa Rita &copy; 2026</div>
   </div>
   <script>
-    // Usuários e senhas iniciais vêm do config.js (APP_CONFIG.USUARIOS).
-    // Senhas trocadas ficam em localStorage ('gf_users_v2'), mesmo formato usado pelo app-config.
-    var DEF = (window.APP_CONFIG && window.APP_CONFIG.USUARIOS) || {};
-    var pendente = null;
+    // Login validado no Supabase (função app_login). Senha nunca fica no navegador.
+    var pendente = null, ocupado = false;
 
-    function lerUsers() {
-      try { return JSON.parse(localStorage.getItem('gf_users_v2') || '{}') || {}; } catch(e) { return {}; }
-    }
     function erro(msg) {
       var err = document.getElementById('err');
       err.textContent = msg;
-      setTimeout(function(){ if(err.textContent === msg) err.textContent=''; }, 3500);
+      setTimeout(function(){ if(err.textContent === msg) err.textContent=''; }, 4000);
     }
-    function entrar(login, role) {
-      var nome = login.charAt(0).toUpperCase() + login.slice(1);
-      sessionStorage.setItem('gf_user', nome);
-      sessionStorage.setItem('gf_role', role);
-      window.location.href = 'app.html';
+    function carregando(on, btnSel, txt) {
+      ocupado = on;
+      var b = document.querySelector(btnSel);
+      if(on){ b.dataset.t = b.textContent; b.textContent = txt; b.disabled = true; }
+      else  { b.textContent = b.dataset.t || b.textContent; b.disabled = false; }
     }
 
     function login() {
+      if(ocupado) return;
       var u = (document.getElementById('u').value||'').trim().toLowerCase();
       var p = document.getElementById('p').value||'';
-      var st = lerUsers()[u], def = DEF[u];
-      if(!st && !def) { document.getElementById('p').value=''; return erro('Usuário ou senha incorretos'); }
-      if(st && st.ativo === false) return erro('Usuário desativado');
-      var senha = (st && st.senha) || (def && def.senha);
-      var role  = (st && st.role)  || (def && def.perfil) || 'funcionario';
-      if(!senha || p !== senha) {
-        document.getElementById('p').value=''; document.getElementById('p').focus();
-        return erro('Usuário ou senha incorretos');
-      }
-      // Ainda usando a senha inicial do config.js → obriga a troca
-      if(def && def.senha && p === def.senha) {
-        pendente = { login:u, role:role, inicial:def.senha, nome:(def.nome||u) };
-        document.getElementById('box-login').style.display='none';
-        document.getElementById('box-troca').style.display='';
-        document.getElementById('troca-nome').textContent = pendente.nome;
-        document.getElementById('n1').focus();
-        return;
-      }
-      entrar(u, role);
+      if(!u || !p) return erro('Informe usuário e senha');
+      carregando(true, '#box-login .btn', 'Entrando…');
+      APP_RPC('app_login', { p_login:u, p_senha:p }).then(function(res){
+        carregando(false, '#box-login .btn');
+        if(!res.ok) { document.getElementById('p').value=''; document.getElementById('p').focus(); return erro(res.erro); }
+        if(res.usuario.trocar_senha) {
+          pendente = { res:res, senha:p };
+          document.getElementById('box-login').style.display='none';
+          document.getElementById('box-troca').style.display='';
+          document.getElementById('troca-nome').textContent = res.usuario.nome;
+          document.getElementById('n1').focus();
+          return;
+        }
+        APP_ENTRAR(res); window.location.href = 'app.html';
+      });
     }
 
     function salvarNovaSenha() {
-      if(!pendente) return;
+      if(!pendente || ocupado) return;
       var a = document.getElementById('n1').value||'', b = document.getElementById('n2').value||'';
       if(a.length < 6)            return erro('A senha precisa ter pelo menos 6 caracteres');
       if(a !== b)                 return erro('As senhas não conferem');
-      if(a === pendente.inicial)  return erro('A nova senha deve ser diferente da inicial');
-      var users = lerUsers();
-      var reg = users[pendente.login] || {};
-      users[pendente.login] = {
-        login: pendente.login,
-        nome:  reg.nome || pendente.nome,
-        senha: a,
-        role:  reg.role || pendente.role,
-        ativo: reg.ativo !== false,
-        perms: reg.perms || {}
-      };
-      localStorage.setItem('gf_users_v2', JSON.stringify(users));
-      entrar(pendente.login, users[pendente.login].role);
+      if(a === pendente.senha)    return erro('A nova senha deve ser diferente da atual');
+      carregando(true, '#box-troca .btn', 'Salvando…');
+      APP_RPC('app_trocar_senha', { p_login:pendente.res.usuario.login, p_atual:pendente.senha, p_nova:a }).then(function(res){
+        carregando(false, '#box-troca .btn');
+        if(!res.ok) return erro(res.erro);
+        pendente.res.usuario.trocar_senha = false;
+        APP_ENTRAR(pendente.res); window.location.href = 'app.html';
+      });
     }
 
-    if(sessionStorage.getItem('gf_user')) window.location.href='app.html';
+    if(sessionStorage.getItem('gf_user') && sessionStorage.getItem('gf_token')) window.location.href='app.html';
     document.getElementById('u').focus();
   </script>
 

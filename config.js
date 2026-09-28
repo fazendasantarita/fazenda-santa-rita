@@ -32,16 +32,6 @@ window.APP_CONFIG = {
     'MARIO',
   ],
 
-  // Logins do sistema. "senha" é a senha INICIAL: no primeiro acesso com ela
-  // o sistema obriga a pessoa a criar uma senha nova.
-  // perfil: 'gestor' (acesso total) ou 'funcionario' (liberações em Config → Acessos)
-  USUARIOS: {
-    admin:   { nome: 'Administrador',         senha: 'trocar123', perfil: 'gestor' },
-    giovana: { nome: 'Giovana Bispo Soares',  senha: '08387',     perfil: 'funcionario' },
-    renata:  { nome: 'Renata Pinto Ferreira', senha: '01567',     perfil: 'funcionario' },
-    juliana: { nome: 'Juliana Pinto Ferreira',senha: '02462',     perfil: 'funcionario' },
-  },
-
   // Titulares dos contratos de endividamento
   TITULARES: [
     'JOSE ADRIANO',
@@ -92,6 +82,31 @@ window.APP_CONFIG = {
     });
   }
   window.CAD_preencher = preencher;
+
+  // Chamada às funções de usuário no Supabase (usuarios.sql). Sempre retorna {ok:..., erro:...}
+  window.APP_RPC = function (fn, args) {
+    return fetch(C.SB_URL + '/rest/v1/rpc/' + fn, {
+      method: 'POST',
+      headers: { 'apikey': C.SB_KEY, 'Authorization': 'Bearer ' + C.SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(args || {})
+    }).then(function (r) {
+      return r.text().then(function (t) {
+        if (!r.ok) return { ok: false, erro: 'Falha no servidor (' + r.status + '). Verifique se o usuarios.sql foi executado.' };
+        try { return JSON.parse(t); } catch (e) { return { ok: false, erro: 'Resposta inválida do servidor' }; }
+      });
+    }).catch(function () { return { ok: false, erro: 'Sem conexão com o servidor' }; });
+  };
+
+  // Guarda a sessão após login. Perfil/permissões ficam no formato que o app.html já lê.
+  window.APP_ENTRAR = function (res) {
+    var u = res.usuario, nome = u.login.charAt(0).toUpperCase() + u.login.slice(1);
+    sessionStorage.setItem('gf_user', nome);
+    sessionStorage.setItem('gf_role', u.perfil);
+    sessionStorage.setItem('gf_token', res.token);
+    var cache = {}; cache[u.login] = { login: u.login, nome: u.nome, role: u.perfil, ativo: u.ativo, perms: u.perms || {} };
+    localStorage.setItem('gf_users_v2', JSON.stringify(cache));   // substitui o cache antigo (que guardava senhas)
+    localStorage.removeItem('gf_roles');
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', preencher);
   else preencher();
 })();
