@@ -928,7 +928,7 @@ input.auto.estouro{background:var(--red-soft)!important;border-color:var(--red)!
 
 <script>
 "use strict";
-const APP_VERSION = "2.93.0";
+const APP_VERSION = "2.94.0";
 const DEV = "Rodolfo C Pinheiro";
 
 /* ═══════════════════════════════════════════════════
@@ -1345,11 +1345,12 @@ const Sync = {
     const locais = fazendas();
     const idsNuvem = new Set((fz||[]).map(r=>r.id));
     const novas = new Set(Store.get("novasFazendas", []));
-    // Cura o fantasma da semeadura: uma fazenda "nova" (ainda não enviada) cujo
-    // NOME já existe na nuvem é a Santa Angelina semeada por engano num aparelho
-    // novo. Descarta local para não virar duplicata na nuvem.
+    // Cura a casca duplicada: qualquer fazenda LOCAL que NÃO está na nuvem mas
+    // tem o MESMO nome de uma que está (ex.: Santa Angelina semeada por engano)
+    // é descartada do aparelho — mesmo que esteja marcada como "nova". A nuvem
+    // é a verdade; assim a duplicata some de qualquer acesso ao sincronizar.
     const nomesNuvem = new Set((fz||[]).map(r=>_normNome(r.nome||"")));
-    const fantasmas = locais.filter(f=> novas.has(f.id) && !idsNuvem.has(f.id) && nomesNuvem.has(_normNome(f.nome||""))).map(f=>f.id);
+    const fantasmas = locais.filter(f=> !idsNuvem.has(f.id) && nomesNuvem.has(_normNome(f.nome||""))).map(f=>f.id);
     if(fantasmas.length){
       const set=new Set(fantasmas);
       fantasmas.forEach(id=>{ novas.delete(id); BLOCOS.forEach(b=>Store.del("faz_"+id+"_"+b)); });
