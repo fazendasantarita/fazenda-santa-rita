@@ -1,77 +1,47 @@
-// Service Worker — Fazenda Santa Rita PWA
-const CACHE_NAME = 'santa-rita-v4';
-const BASE = '/fazenda-santa-rita/';
+/* Safra nas Mãos — service worker
+   Guarda o app no aparelho para abrir sem internet.
+   CACHE muda a cada publicação: é o que dispara a atualização. */
 
-// Arquivos essenciais para cache (shell do app)
-const SHELL = [
-  BASE + 'index.html',
-  BASE + 'app.html',
-  BASE + 'app-endividamento.html',
-  BASE + 'app-config.html',
-  BASE + 'manifest.json',
-  BASE + 'config.js',
-  'https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@600;700&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-];
+const CACHE = "safra-v2.93.0";
+const SHELL = ["./", "./index.html", "./manifest.json", "./icone.svg", "./icone-maskable.svg", "./mapa-santa-angelina.jpg"];
 
-// Instalar: fazer cache do shell
-self.addEventListener('install', function(e) {
+self.addEventListener("install", e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(SHELL).catch(function(err) {
-        console.warn('Cache parcial:', err);
-      });
-    })
+    caches.open(CACHE)
+      .then(c => c.addAll(SHELL.map(u => new Request(u, {cache:"reload"}))))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-// Ativar: limpar caches antigos
-self.addEventListener('activate', function(e) {
+self.addEventListener("activate", e => {
   e.waitUntil(
-    caches.keys().then(function(keys) {
-      return Promise.all(
-        keys.filter(function(k) { return k !== CACHE_NAME; })
-            .map(function(k) { return caches.delete(k); })
-      );
-    })
+    caches.keys()
+      .then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Fetch: network first, fallback para cache
-// Supabase sempre via rede (dados em tempo real)
-self.addEventListener('fetch', function(e) {
-  var url = e.request.url;
+self.addEventListener("message", e => {
+  if (e.data === "pular-espera") self.skipWaiting();
+});
 
-  // Requisições Supabase: sempre rede, sem cache
-  if (url.includes('supabase.co')) {
-    e.respondWith(fetch(e.request));
-    return;
-  }
+self.addEventListener("fetch", e => {
+  const req = e.request;
+  if (req.method !== "GET" || req.url.includes("/rest/v1/")) return;
 
-  // Demais recursos: network first, fallback cache
+  // O HTML e o próprio app nunca saem do cache do navegador:
+  // sem isso, o GitHub Pages devolve a versão antiga por até 10 minutos.
+  const ehApp = req.mode === "navigate" ||
+                /\.(html|js|json|svg)$/.test(new URL(req.url).pathname) ||
+                new URL(req.url).pathname.endsWith("/");
+
   e.respondWith(
-    fetch(e.request)
-      .then(function(response) {
-        // Salvar cópia no cache se for GET bem-sucedido
-        if (e.request.method === 'GET' && response.status === 200) {
-          var clone = response.clone();
-          caches.open(CACHE_NAME).then(function(cache) {
-            cache.put(e.request, clone);
-          });
-        }
-        return response;
+    fetch(ehApp ? new Request(req, {cache:"no-store"}) : req)
+      .then(res => {
+        const copia = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copia)).catch(() => {});
+        return res;
       })
-      .catch(function() {
-        // Offline: tentar do cache
-        return caches.match(e.request).then(function(cached) {
-          if (cached) return cached;
-          // Fallback: retornar index.html para navegação
-          if (e.request.mode === 'navigate') {
-            return caches.match(BASE + 'index.html');
-          }
-        });
-      })
+      .catch(() => caches.match(req).then(r => r || caches.match("./index.html")))
   );
 });
